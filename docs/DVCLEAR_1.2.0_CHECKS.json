@@ -1,0 +1,46 @@
+{
+  "date": "2026-09-27",
+  "tool": "asset-management/dv-clear",
+  "version": "1.2.0",
+  "source_label": "project-scripts-2026-09-27",
+  "source_files": [
+    {
+      "source": "project-scripts-2026-09-27/DVClear.cs",
+      "path": "tools/asset-management/dv-clear/Editor/DVClear.cs",
+      "sha256": "b60b3d1121aaf0f6ad0362356e75d9256883500a667c6e3b9bd638f9802b44c2"
+    },
+    {
+      "source": "project-scripts-2026-09-27/DVClearIndex.cs",
+      "path": "tools/asset-management/dv-clear/Editor/DVClearIndex.cs",
+      "sha256": "cb09d663a95d632fc7a697ebbb9c915e5f96683f92ed46c3dc515c69a79dc50f"
+    }
+  ],
+  "source_cs_and_meta_unchanged": true,
+  "compilation_results": [
+    {
+      "unity_references": "2020.2.2f1c1",
+      "scope": "dv-clear",
+      "exit_code": 0,
+      "diagnostics": ""
+    },
+    {
+      "unity_references": "2020.3.26f1c1",
+      "scope": "dv-clear",
+      "exit_code": 0,
+      "diagnostics": ""
+    },
+    {
+      "unity_references": "2020.3.26f1c1",
+      "scope": "all-tools",
+      "exit_code": 0,
+      "diagnostics": ""
+    }
+  ],
+  "limitations": [
+    "仅静态编译；未启动来源 Unity 工程。",
+    "未实际执行扫描、备份、回收站移动或恢复。",
+    "源码保持原样，包含原有可选批处理诊断中的特定 Shader 路径。"
+  ],
+  "broken_document_links": [],
+  "sensitive_pattern_findings": []
+}

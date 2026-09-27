@@ -20,13 +20,21 @@ namespace EffectTools.Cleanup
         private bool isSearchingDependencies = false; // 默认为特效师最常用的“反向查找”
 
         private int detailIndex = -1;
+        private int resultPage;
+        private const int PageSize = 100;
 
         // 引用树状态。节点展开状态与扫描缓存分离，收起详情后再次打开仍保留原位置。
         private readonly HashSet<string> expandedReferenceNodes = new HashSet<string>();
         private readonly HashSet<string> selectedReferencePaths = new HashSet<string>();
         private readonly Dictionary<string, List<string>> nestedReferenceCache =
             new Dictionary<string, List<string>>();
-        private Dictionary<string, List<string>> reverseLookupCache;
+        private DVClearIndex index;
+        private DVClearIndex buildingIndex;
+        private bool indexDirty = true;
+        private bool scanBusy;
+        private int projectRevision, scanRevision;
+        private List<string> pendingDeletion;
+        private string status = "请选择资源或文件夹。首次扫描会建立全项目引用索引。";
 
         // 定义结果数据结构
         private struct AssetResult
@@ -45,12 +53,13 @@ namespace EffectTools.Cleanup
         {
             // 使用完整路径获取窗口，确保唯一性
             DVClear window = GetWindow<DVClear>("DV Clear - 资源整理助手");
-            window.minSize = new Vector2(650, 600);
+            window.minSize = new Vector2(760, 620);
             window.Show();
         }
 
         private void OnGUI()
         {
+            EditorGUI.BeginDisabledGroup(scanBusy);
             // --- 顶部控制区 ---
             EditorGUILayout.BeginVertical("box");
             GUILayout.Space(5);
@@ -58,7 +67,13 @@ namespace EffectTools.Cleanup
             GUILayout.Space(5);
 
             EditorGUILayout.BeginHorizontal();
-            selectedTarget = EditorGUILayout.ObjectField("目标(文件夹/文件)", selectedTarget, typeof(Object), false);
+            Object nextTarget = EditorGUILayout.ObjectField("目标(文件夹/文件)", selectedTarget, typeof(Object), false);
+            if (nextTarget != selectedTarget)
+            {
+                selectedTarget = nextTarget;
+                scanResults.Clear(); selectedReferencePaths.Clear(); detailIndex = -1;
+                if (index != null && index.Completed && !indexDirty) BuildResults();
+            }
             if (GUILayout.Button("开始扫描", GUILayout.Width(100), GUILayout.Height(20)))
             {
                 ScanAssets();
@@ -81,6 +96,23 @@ namespace EffectTools.Cleanup
             GUILayout.Space(5);
             EditorGUILayout.EndVertical();
 
+            EditorGUI.EndDisabledGroup();
+            EditorGUILayout.HelpBox(status, indexDirty && index != null ? MessageType.Warning : MessageType.Info);
+            EditorGUILayout.BeginHorizontal();
+            if (scanBusy)
+            {
+                Rect progress = GUILayoutUtility.GetRect(100, 18, GUILayout.ExpandWidth(true));
+                EditorGUI.ProgressBar(progress, buildingIndex == null || buildingIndex.Paths.Length == 0 ? 0 : (float)buildingIndex.Processed / buildingIndex.Paths.Length, "分批扫描中");
+                if (GUILayout.Button("取消扫描", GUILayout.Width(90))) CancelScan();
+            }
+            else
+            {
+                if (GUILayout.Button("重建索引")) { indexDirty = true; ScanAssets(); }
+                EditorGUI.BeginDisabledGroup(index == null);
+                if (GUILayout.Button("导出报告 / 诊断")) ExportReport();
+                EditorGUI.EndDisabledGroup();
+            }
+            EditorGUILayout.EndHorizontal();
             // --- 过滤工具栏 ---
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
             searchFilter = EditorGUILayout.TextField("搜索:", searchFilter, EditorStyles.toolbarSearchField);
@@ -98,10 +130,22 @@ namespace EffectTools.Cleanup
 
             EditorGUILayout.HelpBox(
                 isSearchingDependencies
-                    ? "正向模式：数量表示直接依赖数；0 不代表此资源未被其他资源使用。"
-                    : "反向模式仅扫描 Prefab、Material、Scene、Controller 的直接依赖。0 表示此范围内未发现引用；未覆盖所有资源类型或代码动态加载，不能据此认定可安全删除。",
+                    ? "正向模式：数量是 Unity 直接依赖与文本/include 候选的去重总数。可展开追踪间接关系；0 不代表未被使用。"
+                    : "反向索引覆盖 Assets、Packages 和 ProjectSettings：合并 Unity 直接依赖、文本及 .meta GUID 候选、Shader include。文本命中可能只是注释或字符串；0 不代表安全可删，代码动态加载仍需人工核对。",
                 MessageType.Info);
 
+            int visibleCount = scanResults.Count(IsVisible);
+            int pageCount = System.Math.Max(1, (visibleCount + PageSize - 1) / PageSize);
+            resultPage = Mathf.Clamp(resultPage, 0, pageCount - 1);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("匹配 " + visibleCount + " 项 · 第 " + (resultPage + 1) + "/" + pageCount + " 页（每页 " + PageSize + " 项）");
+            EditorGUI.BeginDisabledGroup(resultPage == 0);
+            if (GUILayout.Button("上一页", GUILayout.Width(65))) resultPage--;
+            EditorGUI.EndDisabledGroup();
+            EditorGUI.BeginDisabledGroup(resultPage >= pageCount - 1);
+            if (GUILayout.Button("下一页", GUILayout.Width(65))) resultPage++;
+            EditorGUI.EndDisabledGroup();
+            EditorGUILayout.EndHorizontal();
             DrawHeader();
 
             // --- 列表展示区 ---
@@ -111,6 +155,7 @@ namespace EffectTools.Cleanup
                 EditorGUILayout.HelpBox("请拖入文件夹或资源并点击“开始扫描”", MessageType.Info);
             }
 
+            int visibleOrdinal = 0;
             for (int i = 0; i < scanResults.Count; i++)
             {
                 AssetResult res = scanResults[i];
@@ -122,18 +167,20 @@ namespace EffectTools.Cleanup
                 }
 
                 if (!string.IsNullOrEmpty(searchFilter) &&
-                    res.name.IndexOf(searchFilter, System.StringComparison.OrdinalIgnoreCase) < 0)
+                    res.path.IndexOf(searchFilter, System.StringComparison.OrdinalIgnoreCase) < 0)
                 {
                     continue;
                 }
 
+                int ordinal = visibleOrdinal++;
+                if (ordinal < resultPage * PageSize || ordinal >= (resultPage + 1) * PageSize) continue;
                 EditorGUILayout.BeginVertical(EditorStyles.helpBox);
                 EditorGUILayout.BeginHorizontal();
 
                 res.isSelected = EditorGUILayout.Toggle(res.isSelected, GUILayout.Width(20));
 
                 // 颜色逻辑：未引用标红，当前选中详情标黄
-                GUI.color = (detailIndex == i) ? Color.yellow : (res.refCount == 0 ? Color.red : Color.white);
+                GUI.color = (detailIndex == i) ? Color.yellow : (res.refCount == 0 ? new Color(1f, 0.8f, 0.4f) : Color.white);
                 if (GUILayout.Button(new GUIContent(res.name, res.path), EditorStyles.label, GUILayout.Width(250)))
                 {
                     PingAndSelectAsset(res.path);
@@ -277,6 +324,10 @@ namespace EffectTools.Cleanup
                 GUILayout.Space(20);
             }
 
+            string[] chain = nodeKey.Split('>');
+            string parentPath = chain.Length > 1 ? chain[chain.Length - 2] : "";
+            string evidence = index == null ? "" : (isSearchingDependencies ? index.Describe(parentPath, assetPath) : index.Describe(assetPath, parentPath));
+            GUILayout.Label(new GUIContent("依据", evidence), EditorStyles.miniLabel, GUILayout.Width(30));
             string displayName = Path.GetFileName(assetPath);
             // linkLabel is internal in early Unity 2019 editors.
             if (GUILayout.Button(new GUIContent(displayName, assetPath), EditorStyles.label))
@@ -338,38 +389,8 @@ namespace EffectTools.Cleanup
         private List<string> GetReferencesForPath(string assetPath)
         {
             List<string> cached;
-            if (nestedReferenceCache.TryGetValue(assetPath, out cached))
-            {
-                return cached;
-            }
-
-            List<string> references;
-            if (isSearchingDependencies)
-            {
-                references = AssetDatabase.GetDependencies(assetPath, false)
-                    .Where(path => path != assetPath)
-                    .ToList();
-            }
-            else
-            {
-                string guid = AssetDatabase.AssetPathToGUID(assetPath);
-                if (reverseLookupCache != null &&
-                    !string.IsNullOrEmpty(guid) &&
-                    reverseLookupCache.TryGetValue(guid, out references))
-                {
-                    references = new List<string>(references);
-                }
-                else
-                {
-                    references = new List<string>();
-                }
-            }
-
-            references = references
-                .Where(path => !string.IsNullOrEmpty(path) && path != assetPath)
-                .Distinct()
-                .OrderBy(path => path)
-                .ToList();
+            if (nestedReferenceCache.TryGetValue(assetPath, out cached)) return cached;
+            var references = index == null ? new List<string>() : index.Links(assetPath, isSearchingDependencies);
             nestedReferenceCache[assetPath] = references;
             return references;
         }
@@ -401,12 +422,12 @@ namespace EffectTools.Cleanup
         private void DrawFooter()
         {
             EditorGUILayout.BeginHorizontal("box");
-            if (GUILayout.Button("全选主列表", GUILayout.Width(90)))
+            if (GUILayout.Button("全选可见项", GUILayout.Width(90)))
             {
                 for (int i = 0; i < scanResults.Count; i++)
                 {
                     AssetResult result = scanResults[i];
-                    result.isSelected = true;
+                    if (IsVisible(result)) result.isSelected = true;
                     scanResults[i] = result;
                 }
             }
@@ -427,196 +448,306 @@ namespace EffectTools.Cleanup
             List<string> selectedPaths = GetSelectedAssetPaths();
             EditorGUILayout.LabelField("已选: " + selectedPaths.Count, GUILayout.Width(58));
 
-            GUI.backgroundColor = Color.red;
+            EditorGUI.BeginDisabledGroup(scanBusy || indexDirty || index == null || !index.Completed || index.Issues.Count > 0 || selectedPaths.Count == 0);
+            GUI.backgroundColor = new Color(1f, 0.75f, 0.4f);
             string deleteButtonText = selectedPaths.Count > 0
-                ? "删除选中资源 (" + selectedPaths.Count + ")"
-                : "删除选中资源";
+                ? "核验并清理 (" + selectedPaths.Count + ")"
+                : "核验并清理";
             if (GUILayout.Button(deleteButtonText, GUILayout.Width(145), GUILayout.Height(22)))
             {
                 DeleteSelected();
             }
             GUI.backgroundColor = Color.white;
+            EditorGUI.EndDisabledGroup();
             EditorGUILayout.EndHorizontal();
+        }
+
+        private void OnEnable()
+        {
+            EditorApplication.update += TickScan;
+            EditorApplication.projectChanged += ProjectChanged;
+        }
+
+        private void OnDisable()
+        {
+            EditorApplication.update -= TickScan;
+            EditorApplication.projectChanged -= ProjectChanged;
+            if (scanBusy) { scanBusy = false; indexDirty = true; }
+            pendingDeletion = null;
+        }
+
+        private void ProjectChanged()
+        {
+            projectRevision++;
+            indexDirty = true;
+            if (!scanBusy) status = "工程资源发生变化，结果已过期。请重新扫描。";
+            Repaint();
         }
 
         private void ScanAssets()
         {
-            scanResults.Clear();
-            detailIndex = -1;
-            expandedReferenceNodes.Clear();
-            selectedReferencePaths.Clear();
-            nestedReferenceCache.Clear();
-            reverseLookupCache = null;
-
-            if (selectedTarget == null)
-            {
-                return;
-            }
-
-            try
-            {
-                string targetPath = AssetDatabase.GetAssetPath(selectedTarget);
-                string[] allGuids;
-
-                // 识别是文件夹还是单文件
-                if (Directory.Exists(targetPath))
-                {
-                    allGuids = AssetDatabase.FindAssets(
-                        "t:Texture2D t:Material t:Prefab t:Shader",
-                        new[] { targetPath });
-                }
-                else
-                {
-                    allGuids = new[] { AssetDatabase.AssetPathToGUID(targetPath) };
-                }
-
-                if (!isSearchingDependencies)
-                {
-                    EditorUtility.DisplayProgressBar("DV Clear", "正在全项目扫描引用关系...", 0.1f);
-                    reverseLookupCache = BuildReverseLookup();
-                }
-
-                for (int i = 0; i < allGuids.Length; i++)
-                {
-                    string guid = allGuids[i];
-                    string path = AssetDatabase.GUIDToAssetPath(guid);
-                    if (string.IsNullOrEmpty(path))
-                    {
-                        continue;
-                    }
-
-                    AssetResult result = new AssetResult
-                    {
-                        guid = guid,
-                        path = path,
-                        name = Path.GetFileName(path),
-                        type = AssetDatabase.GetMainAssetTypeAtPath(path),
-                        references = new List<string>()
-                    };
-
-                    if (isSearchingDependencies)
-                    {
-                        // 正向：我用了谁
-                        result.references = AssetDatabase.GetDependencies(path, false)
-                            .Where(dependency => dependency != path)
-                            .Distinct()
-                            .OrderBy(dependency => dependency)
-                            .ToList();
-                    }
-                    else
-                    {
-                        // 反向：谁用了我
-                        List<string> references;
-                        if (reverseLookupCache != null &&
-                            reverseLookupCache.TryGetValue(guid, out references))
-                        {
-                            result.references = new List<string>(references);
-                        }
-                    }
-
-                    result.refCount = result.references.Count;
-                    scanResults.Add(result);
-                }
-            }
-            finally
-            {
-                EditorUtility.ClearProgressBar();
-            }
+            if (scanBusy) return;
+            if (selectedTarget == null) { status = "请先选择资源或文件夹。"; return; }
+            string target = AssetDatabase.GetAssetPath(selectedTarget);
+            if (!(target == "Assets" || target.StartsWith("Assets/") || target.StartsWith("Packages/")))
+            { status = "请选择 Project 中的资源或文件夹。"; return; }
+            if (index != null && index.Completed && !indexDirty)
+            { BuildResults(); return; }
+            StartIndex();
         }
 
-        private Dictionary<string, List<string>> BuildReverseLookup()
+        private void StartIndex()
         {
-            Dictionary<string, List<string>> lookup = new Dictionary<string, List<string>>();
+            scanBusy = true;
+            scanRevision = projectRevision;
+            indexDirty = true;
+            status = "正在建立 Assets、Packages 和 ProjectSettings 的引用索引……";
+            try { buildingIndex = new DVClearIndex(); buildingIndex.Initialize(); }
+            catch (System.Exception e) { scanBusy = false; pendingDeletion = null; status = "索引初始化失败：" + e.Message; }
+            Repaint();
+        }
 
-            // 扫描可能会引用到资源的类型
-            string[] checkGuids = AssetDatabase.FindAssets("t:Prefab t:Material t:Scene t:Controller");
-
-            for (int i = 0; i < checkGuids.Length; i++)
+        private void TickScan()
+        {
+            if (!scanBusy) return;
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode) return;
+            double until = EditorApplication.timeSinceStartup + 0.008;
+            try
             {
-                string path = AssetDatabase.GUIDToAssetPath(checkGuids[i]);
-                float progress = checkGuids.Length > 0 ? (float)i / checkGuids.Length : 1f;
-                EditorUtility.DisplayProgressBar("扫描中", path, progress);
-
-                string[] dependencies = AssetDatabase.GetDependencies(path, false);
-                foreach (string dependency in dependencies)
+                do
                 {
-                    if (dependency == path)
+                    if (!buildingIndex.Step())
                     {
-                        continue;
+                        index = buildingIndex;
+                        buildingIndex = null;
+                        scanBusy = false;
+                        indexDirty = projectRevision != scanRevision;
+                        BuildResults();
+                        var toDelete = pendingDeletion;
+                        pendingDeletion = null;
+                        if (toDelete != null) ConfirmDeletion(toDelete);
+                        Repaint();
+                        return;
                     }
-
-                    string dependencyGuid = AssetDatabase.AssetPathToGUID(dependency);
-                    if (string.IsNullOrEmpty(dependencyGuid))
-                    {
-                        continue;
-                    }
-
-                    List<string> referencePaths;
-                    if (!lookup.TryGetValue(dependencyGuid, out referencePaths))
-                    {
-                        referencePaths = new List<string>();
-                        lookup[dependencyGuid] = referencePaths;
-                    }
-
-                    if (!referencePaths.Contains(path))
-                    {
-                        referencePaths.Add(path);
-                    }
-                }
+                } while (EditorApplication.timeSinceStartup < until);
+                status = "扫描 " + buildingIndex.Processed + "/" + buildingIndex.Paths.Length + "：" + buildingIndex.CurrentPath;
             }
+            catch (System.Exception e)
+            { scanBusy = false; indexDirty = true; buildingIndex = null; pendingDeletion = null; status = "扫描失败，未生成可用于清理的完整结果：" + e.Message; }
+            Repaint();
+        }
 
-            foreach (List<string> references in lookup.Values)
+        private void BuildResults()
+        {
+            scanResults.Clear();
+            resultPage = 0;
+            nestedReferenceCache.Clear();
+            expandedReferenceNodes.Clear();
+            selectedReferencePaths.Clear();
+            detailIndex = -1;
+            if (index == null || selectedTarget == null) return;
+            string target = AssetDatabase.GetAssetPath(selectedTarget);
+            IEnumerable<string> paths = AssetDatabase.IsValidFolder(target)
+                ? index.Paths.Where(p => p.StartsWith(target.TrimEnd('/') + "/", System.StringComparison.Ordinal))
+                : new[] { target };
+            foreach (string path in paths)
             {
-                references.Sort();
+                if (!(path.StartsWith("Assets/") || path.StartsWith("Packages/"))) continue;
+                var refs = index.Links(path, isSearchingDependencies);
+                scanResults.Add(new AssetResult { guid = AssetDatabase.AssetPathToGUID(path), path = path,
+                    name = Path.GetFileName(path), type = AssetDatabase.GetMainAssetTypeAtPath(path), references = refs, refCount = refs.Count });
             }
+            status = (indexDirty ? "扫描期间工程有变化，结果已过期；请重扫。" : "扫描完成。") +
+                " 索引 " + index.Paths.Length + " 个文件，目标 " + scanResults.Count + " 个；读取问题 " + index.Issues.Count +
+                " 项，未解析 GUID 候选 " + index.Unresolved.Count + " 项。";
+        }
 
-            return lookup;
+        private void CancelScan()
+        {
+            scanBusy = false;
+            buildingIndex = null;
+            pendingDeletion = null;
+            indexDirty = true;
+            status = "已取消。未完成的索引已丢弃；旧结果仅供参考，不能用于清理。";
+        }
+
+        private bool IsVisible(AssetResult result)
+        {
+            return !(hideUsed && result.refCount > 0) && (string.IsNullOrEmpty(searchFilter) ||
+                result.path.IndexOf(searchFilter, System.StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
+        private void ExportReport()
+        {
+            if (index == null) return;
+            string path = EditorUtility.SaveFilePanel("导出 DV Clear 报告", "", "DVClear-" + System.DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".csv", "csv");
+            if (string.IsNullOrEmpty(path)) return;
+            try
+            {
+                using (var writer = new StreamWriter(path, false, new System.Text.UTF8Encoding(true)))
+                {
+                    writer.WriteLine("状态,方向,目标资源,关联资源,依据");
+                    string state = indexDirty ? "过期/取消，不可用于清理" : index.Issues.Count > 0 ? "完成但存在读取问题" : "扫描完成，动态加载未覆盖";
+                    foreach (var row in scanResults)
+                    {
+                        if (!IsVisible(row)) continue;
+                        if (row.references.Count == 0) writer.WriteLine(Csv(state) + "," + Csv(isSearchingDependencies ? "正向" : "反向") + "," + Csv(row.path) + ",,扫描范围内无记录");
+                        foreach (string other in row.references)
+                            writer.WriteLine(Csv(state) + "," + Csv(isSearchingDependencies ? "正向" : "反向") + "," + Csv(row.path) + "," + Csv(other) + "," + Csv(isSearchingDependencies ? index.Describe(row.path, other) : index.Describe(other, row.path)));
+                    }
+                    foreach (string issue in index.Issues) writer.WriteLine(Csv("读取问题") + ",,,," + Csv(issue));
+                    foreach (string unresolved in index.Unresolved) writer.WriteLine(Csv("未解析 GUID 候选") + ",,,," + Csv(unresolved));
+                }
+                status = "报告已导出：" + path;
+            }
+            catch (System.Exception e) { status = "导出失败：" + e.Message; }
+        }
+
+        private static string Csv(string value)
+        {
+            value = value ?? "";
+            if (value.Length > 0 && "=+-@".IndexOf(value[0]) >= 0) value = "'" + value;
+            return "\"" + value.Replace("\"", "\"\"") + "\"";
         }
 
         private void DeleteSelected()
         {
-            List<string> pathsToDelete = GetSelectedAssetPaths();
-            if (pathsToDelete.Count == 0)
+            if (scanBusy) return;
+            var paths = GetSelectedAssetPaths();
+            if (paths.Count == 0) { status = "请先勾选要清理的资源。"; return; }
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.isPlayingOrWillChangePlaymode)
+            { status = "请在编辑模式且导入/编译完成后重试。"; return; }
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating)
+            { status = "资源已刷新，请等待编译完成再核验。"; return; }
+            pendingDeletion = paths;
+            StartIndex(); // Never authorize removal from a cached or forward-only count.
+        }
+
+        internal static List<string> RemovalBlockers(DVClearIndex snapshot, List<string> paths)
+        {
+            var blockers = new List<string>();
+            var selected = new HashSet<string>(paths, System.StringComparer.Ordinal);
+            var protectedExtensions = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase)
+            { ".cs", ".dll", ".asmdef", ".asmref", ".shader", ".hlsl", ".cginc", ".compute", ".unity" };
+            foreach (string path in paths)
             {
+                if (!path.StartsWith("Assets/", System.StringComparison.Ordinal) || AssetDatabase.IsValidFolder(path) || !File.Exists(path) || !File.Exists(path + ".meta"))
+                { blockers.Add(path + "：仅允许具有 .meta 的 Assets 内单个资源文件"); continue; }
+                string lower = path.ToLowerInvariant();
+                if (protectedExtensions.Contains(Path.GetExtension(path)) || lower.Contains("/resources/") || lower.Contains("/streamingassets/") || lower.Contains("/editor/"))
+                    blockers.Add(path + "：代码、Shader、场景或特殊加载目录已保护");
+                var importer = AssetImporter.GetAtPath(path);
+                if (importer != null && !string.IsNullOrEmpty(importer.assetBundleName)) blockers.Add(path + "：设置了 AssetBundle 名称");
+                foreach (string reference in snapshot.Links(path, false))
+                    if (!selected.Contains(reference)) blockers.Add(path + " ← " + reference);
+            }
+            return blockers;
+        }
+
+        private void ConfirmDeletion(List<string> paths)
+        {
+            if (indexDirty || index == null || !index.Completed || index.Issues.Count != 0)
+            { status = "已停止清理：索引过期、不完整或存在读取问题。可导出报告查看。"; return; }
+            if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling)
+            { status = "请在编辑模式且编译完成后重试。"; return; }
+            for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)
+                if (UnityEngine.SceneManagement.SceneManager.GetSceneAt(i).isDirty)
+                { status = "已停止清理：存在未保存场景，请先自行保存，再重新核验。"; return; }
+            if (Resources.FindObjectsOfTypeAll<Object>().Any(o => o != null && EditorUtility.IsPersistent(o) && EditorUtility.IsDirty(o)))
+            { status = "已停止清理：存在未保存的资源修改，请先自行保存。"; return; }
+            List<string> blockers = RemovalBlockers(index, paths);
+            if (blockers.Count > 0)
+            {
+                status = "已停止清理：存在外部引用或受保护资源。";
+                EditorUtility.DisplayDialog("不能清理所选资源", string.Join("\n", blockers.Take(15).ToArray()) + (blockers.Count > 15 ? "\n……共 " + blockers.Count + " 项" : ""), "知道了");
                 return;
             }
-
-            const int maxPreviewCount = 12;
-            List<string> previewPaths = pathsToDelete.Take(maxPreviewCount).ToList();
-            string preview = string.Join("\n", previewPaths.ToArray());
-            if (pathsToDelete.Count > maxPreviewCount)
+            string preview = string.Join("\n", paths.Take(12).ToArray());
+            if (paths.Count > 12) preview += "\n……共 " + paths.Count + " 个（以窗口勾选路径为准）";
+            string previewFile = Path.GetFullPath("Logs/DVClearCleanupPreview.txt");
+            try { Directory.CreateDirectory("Logs"); File.WriteAllLines(previewFile, paths.ToArray()); }
+            catch (System.Exception e) { status = "无法生成完整清理清单，已停止：" + e.Message; return; }
+            int choice = EditorUtility.DisplayDialogComplex("备份并移入系统回收站？", preview +
+                "\n\n已重新扫描，未发现所选集合之外的已知引用；字符串路径、动态加载和外部代码仍可能使用这些资源。\n先在项目根目录 DVClearBackups 备份资源和 .meta，再移入系统回收站。\n完整清单：" + previewFile, "备份并移入回收站", "取消", "查看完整清单");
+            if (choice == 2) { EditorUtility.RevealInFinder(previewFile); status = "已生成完整清单，未移动资源；审阅后可再次点击核验并清理。"; return; }
+            if (choice != 0)
+            { status = "已取消清理，未移动任何资源。"; return; }
+            if (indexDirty) { status = "确认期间工程发生变化，请重新核验。"; return; }
+            string backup = Path.GetFullPath(Path.Combine("DVClearBackups", System.DateTime.Now.ToString("yyyyMMdd-HHmmss-fff")));
+            var moved = new List<string>();
+            var failed = new List<string>();
+            try
             {
-                preview += "\n……以及另外 " + (pathsToDelete.Count - maxPreviewCount) + " 个资源";
-            }
-
-            string message = string.Format(
-                "确定要从项目中永久删除这 {0} 个资源吗？\n\n{1}\n\n该操作不可撤销，请确认路径无误。",
-                pathsToDelete.Count,
-                preview);
-            if (EditorUtility.DisplayDialog("确认删除", message, "确定", "取消"))
-            {
-                List<string> failedPaths = new List<string>();
-                foreach (string path in pathsToDelete)
-                {
-                    if (!AssetDatabase.DeleteAsset(path))
+                status = "正在备份所选资源……";
+                foreach (string path in paths)
+                    foreach (string file in new[] { path, path + ".meta" })
                     {
-                        failedPaths.Add(path);
+                        string dest = Path.Combine(backup, file);
+                        Directory.CreateDirectory(Path.GetDirectoryName(dest));
+                        File.Copy(file, dest, false);
+                        if (FileHash(file) != FileHash(dest)) throw new IOException("备份校验失败：" + file);
                     }
-                }
-
-                AssetDatabase.Refresh();
-                ScanAssets();
-
-                if (failedPaths.Count > 0)
+                File.WriteAllLines(Path.Combine(backup, "selected-paths.txt"), paths.ToArray());
+                File.WriteAllText(Path.Combine(backup, "恢复说明.txt"), "关闭 Unity 后，将本目录 Assets 下需要恢复的文件及其 .meta 放回原工程相同位置。不要覆盖后续创建的文件；路径冲突时先核对。移动结果见 moved.txt 和 failed.txt。");
+                if (indexDirty) throw new IOException("备份期间工程发生变化，未开始移动资源，请重新核验。");
+                foreach (string path in paths)
                 {
-                    EditorUtility.DisplayDialog(
-                        "部分资源删除失败",
-                        "以下资源未能删除：\n\n" + string.Join("\n", failedPaths.ToArray()),
-                        "知道了");
+                    if (AssetDatabase.MoveAssetToTrash(path)) moved.Add(path); else failed.Add(path);
+                    File.WriteAllLines(Path.Combine(backup, "moved.txt"), moved.ToArray());
+                    File.WriteAllLines(Path.Combine(backup, "failed.txt"), failed.ToArray());
                 }
+                status = "清理完成：已移入回收站 " + moved.Count + "，失败 " + failed.Count + "。备份：" + backup;
+            }
+            catch (System.Exception e)
+            { status = "清理中止：" + e.Message + "；已移动 " + moved.Count + "。备份：" + backup; Debug.LogWarning(status); }
+            finally
+            {
+                indexDirty = true;
+                AssetDatabase.Refresh();
+                EditorUtility.DisplayDialog("DV Clear 清理结果", status, "知道了");
             }
         }
+
+        private static string FileHash(string path)
+        {
+            using (var sha = System.Security.Cryptography.SHA256.Create())
+            using (var stream = File.OpenRead(path))
+                return System.BitConverter.ToString(sha.ComputeHash(stream));
+        }
+
+        [System.Serializable]
+        private class DiagnosticReport
+        {
+            public string unity, time, error;
+            public int files, edges;
+            public double seconds;
+            public string[] issues, unresolvedGuidCandidates, nasShaderDependencies;
+        }
+
+        // Optional batch entry point: read dependencies and write a diagnostic report only.
+        public static void WriteProjectDiagnostics()
+        {
+            var report = new DiagnosticReport { unity = Application.unityVersion, time = System.DateTime.Now.ToString("o") };
+            double started = EditorApplication.timeSinceStartup;
+            try
+            {
+                var snapshot = new DVClearIndex(); snapshot.Initialize();
+                while (snapshot.Step()) { }
+                report.files = snapshot.Paths.Length;
+                report.edges = snapshot.Forward.Values.Sum(edges => edges.Count);
+                report.issues = snapshot.Issues.ToArray();
+                report.unresolvedGuidCandidates = snapshot.Unresolved.ToArray();
+                report.nasShaderDependencies = snapshot.Links("Assets/Apps/MMO/Bundles/Shaders/Nas_Effect_Uber.shader", true).ToArray();
+            }
+            catch (System.Exception e) { report.error = e.ToString(); }
+            report.seconds = EditorApplication.timeSinceStartup - started;
+            Directory.CreateDirectory("Logs");
+            File.WriteAllText("Logs/DVClearProjectAudit.json", JsonUtility.ToJson(report, true));
+            if (!string.IsNullOrEmpty(report.error)) Debug.LogError("DVCLEAR_PROJECT_AUDIT_FAILED " + report.error);
+            else Debug.Log("DVCLEAR_PROJECT_AUDIT_COMPLETE files=" + report.files + " issues=" + report.issues.Length);
+        }
+
     }
 }
-
 #endif
