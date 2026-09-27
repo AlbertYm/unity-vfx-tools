@@ -1,0 +1,134 @@
+[
+  {
+    "id": "asset-management/dv-clear",
+    "name": "资源依赖与清理",
+    "version": "1.1.0",
+    "status": "maintained",
+    "files": [
+      {
+        "source": "Unity兼容版_2019-2025_1.1.0/Editor/DVClear.cs",
+        "path": "tools/asset-management/dv-clear/Editor/DVClear.cs",
+        "sha256": "6218702697495d9e2c8375d13e1511844f9a8c3fc3295ff0284e2dc43bd952f6"
+      }
+    ]
+  },
+  {
+    "id": "asset-management/material-rename",
+    "name": "按贴图名称重命名材质",
+    "version": "1.1.0",
+    "status": "maintained",
+    "files": [
+      {
+        "source": "Unity兼容版_2019-2025_1.1.0/Editor/ChangeName.cs",
+        "path": "tools/asset-management/material-rename/Editor/ChangeName.cs",
+        "sha256": "7c0055f96cc1d29a06220866540a0c2ea01ea846439e7ccca83056afc56ceb2e"
+      }
+    ]
+  },
+  {
+    "id": "asset-management/reference-checker",
+    "name": "资源引用搜索",
+    "version": "1.1.0",
+    "status": "maintained",
+    "files": [
+      {
+        "source": "Unity兼容版_2019-2025_1.1.0/Editor/FindReference.cs",
+        "path": "tools/asset-management/reference-checker/Editor/FindReference.cs",
+        "sha256": "50362dec567c3829a9ca79a89e7c3eac3a07308e34f5df081760a99a66129a51"
+      }
+    ]
+  },
+  {
+    "id": "textures/texture-adjust",
+    "name": "特效贴图调整",
+    "version": "1.1.0",
+    "status": "maintained",
+    "files": [
+      {
+        "source": "Unity兼容版_2019-2025_1.1.0/Editor/VFXTextureAdjust.cs",
+        "path": "tools/textures/texture-adjust/Editor/VFXTextureAdjust.cs",
+        "sha256": "bb3f9a2d81cd33343db1d12dac52a993195e2d782d93748514742c5c96f6d830"
+      }
+    ]
+  },
+  {
+    "id": "previews/prefab-thumbnail",
+    "name": "特效预制体选帧缩略图",
+    "version": "1.1.0",
+    "status": "maintained",
+    "files": [
+      {
+        "source": "Unity兼容版_2019-2025_1.1.0/Editor/VFXPrefabThumbnailWindow.cs",
+        "path": "tools/previews/prefab-thumbnail/Editor/VFXPrefabThumbnailWindow.cs",
+        "sha256": "6842837f1cae9543f1f978d779b89896a6f89f85726fd7cebd97d5303a12bc6f"
+      },
+      {
+        "source": "Unity兼容版_2019-2025_1.1.0/Editor/VFXThumbnailPreview.cs",
+        "path": "tools/previews/prefab-thumbnail/Editor/VFXThumbnailPreview.cs",
+        "sha256": "d4e256c8ac3ca47b3b90bfeaa559ae5b60ceae6a4db0482c344c91457de3a609"
+      },
+      {
+        "source": "Unity兼容版_2019-2025_1.1.0/Editor/VFXThumbnailStore.cs",
+        "path": "tools/previews/prefab-thumbnail/Editor/VFXThumbnailStore.cs",
+        "sha256": "c7197d721e95714d962c5c1d46e4f44b4b41569a532a3dd458f562556aad5152"
+      }
+    ]
+  },
+  {
+    "id": "runtime/bullet-time",
+    "name": "子弹时间",
+    "version": "1.1.0",
+    "status": "maintained",
+    "files": [
+      {
+        "source": "Unity兼容版_2019-2025_1.1.0/Runtime/BulletTimeController.cs",
+        "path": "tools/runtime/bullet-time/Runtime/BulletTimeController.cs",
+        "sha256": "1905955cc44beed6745b1ee418e3ff92dcb6345b68167d7cac113854817116ed"
+      }
+    ]
+  },
+  {
+    "id": "runtime/effect-delay",
+    "name": "特效延迟播放",
+    "version": "1.1.0",
+    "status": "maintained",
+    "files": [
+      {
+        "source": "Unity兼容版_2019-2025_1.1.0/Runtime/EffectDelayHelper.cs",
+        "path": "tools/runtime/effect-delay/Runtime/EffectDelayHelper.cs",
+        "sha256": "53393b4d67a6aff8cb118e98af5eef0b4ee53cccfb850a18524ebbc5b9c4f476"
+      },
+      {
+        "source": "Unity兼容版_2019-2025_1.1.0/Runtime/EffectDelayRunner.cs",
+        "path": "tools/runtime/effect-delay/Runtime/EffectDelayRunner.cs",
+        "sha256": "5d913da79dc90dd9f7230fa5cf4170a5599ee4648568c6ec1a21003a3b92f1cc"
+      }
+    ]
+  },
+  {
+    "id": "runtime/screen-color",
+    "name": "相机黑白背景切换",
+    "version": "1.1.0",
+    "status": "maintained",
+    "files": [
+      {
+        "source": "Unity兼容版_2019-2025_1.1.0/Runtime/ScreenColorControl.cs",
+        "path": "tools/runtime/screen-color/Runtime/ScreenColorControl.cs",
+        "sha256": "bbe300f3977dc0962d502aad7c57539671f3e7e79bc5537bc965813968e1d616"
+      }
+    ]
+  },
+  {
+    "id": "particles/start-delay-editor",
+    "name": "批量编辑粒子起始延迟（实验）",
+    "version": "0.1.0",
+    "status": "experimental",
+    "files": [
+      {
+        "source": "Unity兼容版_2019-2025_1.1.0/Runtime/ParticleSystemEditorExtension.cs",
+        "path": "tools/particles/start-delay-editor/Editor/ParticleSystemEditorExtension.cs",
+        "sha256": "10cc54a4e12de294e2c2005361d647518e20c7ac68e7613e87ddf28cc46dda8f"
+      }
+    ]
+  }
+]

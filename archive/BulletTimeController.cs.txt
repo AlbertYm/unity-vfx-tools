@@ -1,0 +1,64 @@
+using UnityEngine;
+using System.Collections;
+[ExecuteAlways] 
+public class BulletTimeController : MonoBehaviour
+{
+    [Tooltip("The factor by which to slow down time. E.g., 0.1 means 10% of normal speed.")]
+    public float slowMagnitude = 0.1f;
+
+    [Tooltip("Duration of the slow-motion effect in seconds.")]
+    public float slowDuration = 2f;
+
+    [Tooltip("Toggle to activate bullet time.")]
+    public bool enableBulletTime = false;
+
+    private bool isBulletTimeActive = false;
+    private float originalTimeScale;
+    private float originalFixedDeltaTime;
+
+    void Start()
+    {
+        // Store the original time scale and fixed delta time
+        originalTimeScale = Time.timeScale;
+        originalFixedDeltaTime = Time.fixedDeltaTime;
+    }
+
+    void Update()
+    {
+        // Check the enableBulletTime toggle to activate or deactivate bullet time
+        if (enableBulletTime && !isBulletTimeActive)
+        {
+            StartCoroutine(ActivateBulletTime());
+        }
+        else if (!enableBulletTime && isBulletTimeActive)
+        {
+            DeactivateBulletTime();
+        }
+    }
+
+    private IEnumerator ActivateBulletTime()
+    {
+        isBulletTimeActive = true;
+
+        // Slow down time
+        Time.timeScale = slowMagnitude;
+        Time.fixedDeltaTime = 0.02f * Time.timeScale;
+
+        // Wait for the slow duration
+        yield return new WaitForSecondsRealtime(slowDuration);
+
+        // Restore time if still in bullet time mode
+        if (isBulletTimeActive)
+        {
+            DeactivateBulletTime();
+        }
+    }
+
+    private void DeactivateBulletTime()
+    {
+        // Restore original time scale and fixed delta time
+        Time.timeScale = originalTimeScale;
+        Time.fixedDeltaTime = originalFixedDeltaTime;
+        isBulletTimeActive = false;
+    }
+}

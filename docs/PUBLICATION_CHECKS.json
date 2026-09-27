@@ -1,0 +1,98 @@
+{
+  "date": "2026-09-27",
+  "source_files_unchanged": 53,
+  "current_cs_identical_to_source": 12,
+  "compilations": [
+    {
+      "name": "asset-management/dv-clear",
+      "unity_references": "2020.3.26f1c1",
+      "language": "7.3",
+      "exit_code": 0,
+      "diagnostics": ""
+    },
+    {
+      "name": "asset-management/material-rename",
+      "unity_references": "2020.3.26f1c1",
+      "language": "7.3",
+      "exit_code": 0,
+      "diagnostics": ""
+    },
+    {
+      "name": "asset-management/reference-checker",
+      "unity_references": "2020.3.26f1c1",
+      "language": "7.3",
+      "exit_code": 0,
+      "diagnostics": ""
+    },
+    {
+      "name": "textures/texture-adjust",
+      "unity_references": "2020.3.26f1c1",
+      "language": "7.3",
+      "exit_code": 0,
+      "diagnostics": ""
+    },
+    {
+      "name": "previews/prefab-thumbnail",
+      "unity_references": "2020.3.26f1c1",
+      "language": "7.3",
+      "exit_code": 0,
+      "diagnostics": ""
+    },
+    {
+      "name": "runtime/bullet-time",
+      "unity_references": "2020.3.26f1c1",
+      "language": "7.3",
+      "exit_code": 0,
+      "diagnostics": ""
+    },
+    {
+      "name": "runtime/effect-delay",
+      "unity_references": "2020.3.26f1c1",
+      "language": "7.3",
+      "exit_code": 0,
+      "diagnostics": ""
+    },
+    {
+      "name": "runtime/screen-color",
+      "unity_references": "2020.3.26f1c1",
+      "language": "7.3",
+      "exit_code": 0,
+      "diagnostics": ""
+    },
+    {
+      "name": "particles/start-delay-editor",
+      "unity_references": "2020.3.26f1c1",
+      "language": "7.3",
+      "exit_code": 0,
+      "diagnostics": ""
+    },
+    {
+      "name": "all-editor",
+      "unity_references": "2020.3.26f1c1",
+      "language": "7.3",
+      "exit_code": 0,
+      "diagnostics": ""
+    },
+    {
+      "name": "all-player",
+      "unity_references": "2020.3.26f1c1",
+      "language": "7.3",
+      "exit_code": 0,
+      "diagnostics": ""
+    },
+    {
+      "name": "legacy-time",
+      "unity_references": "2020.3.26f1c1",
+      "language": "7.3",
+      "exit_code": 0,
+      "diagnostics": ""
+    }
+  ],
+  "broken_links": [],
+  "sensitive_pattern_findings": [],
+  "limitations": [
+    "Static compilation only; no Unity editor launch, scene interaction, or full Player build in this run.",
+    "Historical acceptance logs are imported evidence, not rerun results.",
+    "Pattern scan is not proof of absence of all sensitive information."
+  ]
+}

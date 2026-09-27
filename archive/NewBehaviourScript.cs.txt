@@ -1,0 +1,66 @@
+using System.Collections;
+using UnityEngine;
+
+namespace EffectDelayMaker
+{
+    public class EffectDelayHelper : MonoBehaviour
+    {
+        // 公共字段用于设置延迟时间和总时间
+        public float delay = 0.0f;
+        public float totalTime = 0f;
+        public bool havePlayed = false;
+        [SerializeField]
+        private bool replay = false;
+
+        private void Awake()
+        {
+            // 设置目标帧率
+            Application.targetFrameRate = 60;
+        }
+
+        private void OnDisable()
+        {
+            // 重置 havePlayed 标志
+            havePlayed = false;
+        }
+
+        private void OnEnable()
+        {
+            // 如果尚未播放，启动延迟激活协程
+            if (!havePlayed)
+            {
+                StartCoroutine(ActivateAfterDelay());
+            }
+        }
+
+        private void Update()
+        {
+            // 如果 replay 为真，重置并重新启动延迟激活协程
+            if (replay)
+            {
+                replay = false;
+                StartCoroutine(ActivateAfterDelay());
+            }
+        }
+
+        private IEnumerator ActivateAfterDelay()
+        {
+            // 检查对象是否处于活动状态
+            if (gameObject.activeInHierarchy)
+            {
+                gameObject.SetActive(false);
+            }
+
+            // 等待指定的延迟时间
+            yield return new WaitForSeconds(delay);
+            ShowGameobject();
+        }
+
+        private void ShowGameobject()
+        {
+            // 设置 havePlayed 标志并激活对象
+            havePlayed = true;
+            gameObject.SetActive(true);
+        }
+    }
+}

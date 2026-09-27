@@ -1,0 +1,373 @@
+[
+  {
+    "source": "Blcak_Write.cs",
+    "source_sha256": "bfa9756d01442e7260a4c07f7d175aa7e460d78b6c00c35ffa33b4c34608fa4a",
+    "archive": "archive/Blcak_Write.cs.txt",
+    "archive_sha256": "bfa9756d01442e7260a4c07f7d175aa7e460d78b6c00c35ffa33b4c34608fa4a",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "Blcak_Write.cs.meta",
+    "source_sha256": "44c410db5be6d40fc0fd6f9e647fc8a4a0d02b35fb2e9b6216024b45daa67177",
+    "archive": "archive/Blcak_Write.cs.meta.txt",
+    "archive_sha256": "44c410db5be6d40fc0fd6f9e647fc8a4a0d02b35fb2e9b6216024b45daa67177",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "BulletTimeController.cs",
+    "source_sha256": "34bec4c8bbaaa13c739648a2eec770c0e356de55597e49c438478a4d946a42da",
+    "archive": "archive/BulletTimeController.cs.txt",
+    "archive_sha256": "34bec4c8bbaaa13c739648a2eec770c0e356de55597e49c438478a4d946a42da",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "BulletTimeController.cs.meta",
+    "source_sha256": "34b2b2a6941c4f0683a47fd075972e00e3c49a60836878b47f97adf13059ba6d",
+    "archive": "archive/BulletTimeController.cs.meta.txt",
+    "archive_sha256": "34b2b2a6941c4f0683a47fd075972e00e3c49a60836878b47f97adf13059ba6d",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "ChangeName.cs",
+    "source_sha256": "4c3f5a284fdca91b6991e2317b5d24e68e7e5d9deeb55260cca7a2c4f5eb2af1",
+    "archive": "archive/ChangeName.cs.txt",
+    "archive_sha256": "4c3f5a284fdca91b6991e2317b5d24e68e7e5d9deeb55260cca7a2c4f5eb2af1",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "ChangeName.cs.meta",
+    "source_sha256": "5be19e4c587a0094fb361f6b681b86dd623480ceba54b4375678297fc78172ac",
+    "archive": "archive/ChangeName.cs.meta.txt",
+    "archive_sha256": "5be19e4c587a0094fb361f6b681b86dd623480ceba54b4375678297fc78172ac",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "DVClear.cs",
+    "source_sha256": "c31da81c6613ed10de528a212fd0f2d50af75c9510c7dc10c4c750504ccdc11f",
+    "archive": "archive/DVClear.cs.txt",
+    "archive_sha256": "c31da81c6613ed10de528a212fd0f2d50af75c9510c7dc10c4c750504ccdc11f",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "DVClear.cs.meta",
+    "source_sha256": "d9533cab5508cd463430f703836081c9ba6e155cdda571701e75f85c86edccac",
+    "archive": "archive/DVClear.cs.meta.txt",
+    "archive_sha256": "d9533cab5508cd463430f703836081c9ba6e155cdda571701e75f85c86edccac",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "FindReference.cs",
+    "source_sha256": "4b0a921d708e241789e0daf286d1b4cda87b5d8ddb138d2ae6f397c6afaa2a6d",
+    "archive": "archive/FindReference.cs.txt",
+    "archive_sha256": "4b0a921d708e241789e0daf286d1b4cda87b5d8ddb138d2ae6f397c6afaa2a6d",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "FindReference.cs.meta",
+    "source_sha256": "8628ee229824f19e54204cdc1bfc1dca3d368a31bb6e0e91808da466d570b42d",
+    "archive": "archive/FindReference.cs.meta.txt",
+    "archive_sha256": "8628ee229824f19e54204cdc1bfc1dca3d368a31bb6e0e91808da466d570b42d",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "NewBehaviourScript.cs",
+    "source_sha256": "4a2aff24058283e5859152d8f1167881b5ebae2eda3d38ed8a23ebc41ebeb5ca",
+    "archive": "archive/NewBehaviourScript.cs.txt",
+    "archive_sha256": "4a2aff24058283e5859152d8f1167881b5ebae2eda3d38ed8a23ebc41ebeb5ca",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "NewBehaviourScript.cs.meta",
+    "source_sha256": "3990ac4941abb4a958b8a279c74c04a580c8946c0d006a34c8f89b113427bb40",
+    "archive": "archive/NewBehaviourScript.cs.meta.txt",
+    "archive_sha256": "3990ac4941abb4a958b8a279c74c04a580c8946c0d006a34c8f89b113427bb40",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "Unity兼容版_2019-2025_1.1.0/Docs/贴图调整.md",
+    "source_sha256": "6005269157a6b13cbf04f355ac9a188ea3d3888d18d400ce102581467c7edce0",
+    "archive": "archive/Unity兼容版_2019-2025_1.1.0/Docs/贴图调整.md",
+    "archive_sha256": "6005269157a6b13cbf04f355ac9a188ea3d3888d18d400ce102581467c7edce0",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "Unity兼容版_2019-2025_1.1.0/Docs/预制体缩略图.md",
+    "source_sha256": "e9967496dd7fb34ec0f8abad7bab1870b2a29251487f29d1aec0403233b18022",
+    "archive": "archive/Unity兼容版_2019-2025_1.1.0/Docs/预制体缩略图.md",
+    "archive_sha256": "e9967496dd7fb34ec0f8abad7bab1870b2a29251487f29d1aec0403233b18022",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "Unity兼容版_2019-2025_1.1.0/Editor/ChangeName.cs",
+    "source_sha256": "7c0055f96cc1d29a06220866540a0c2ea01ea846439e7ccca83056afc56ceb2e",
+    "archive": "archive/Unity兼容版_2019-2025_1.1.0/Editor/ChangeName.cs.txt",
+    "archive_sha256": "7c0055f96cc1d29a06220866540a0c2ea01ea846439e7ccca83056afc56ceb2e",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "Unity兼容版_2019-2025_1.1.0/Editor/DVClear.cs",
+    "source_sha256": "6218702697495d9e2c8375d13e1511844f9a8c3fc3295ff0284e2dc43bd952f6",
+    "archive": "archive/Unity兼容版_2019-2025_1.1.0/Editor/DVClear.cs.txt",
+    "archive_sha256": "6218702697495d9e2c8375d13e1511844f9a8c3fc3295ff0284e2dc43bd952f6",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "Unity兼容版_2019-2025_1.1.0/Editor/FindReference.cs",
+    "source_sha256": "50362dec567c3829a9ca79a89e7c3eac3a07308e34f5df081760a99a66129a51",
+    "archive": "archive/Unity兼容版_2019-2025_1.1.0/Editor/FindReference.cs.txt",
+    "archive_sha256": "50362dec567c3829a9ca79a89e7c3eac3a07308e34f5df081760a99a66129a51",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "Unity兼容版_2019-2025_1.1.0/Editor/VFXPrefabThumbnailWindow.cs",
+    "source_sha256": "6842837f1cae9543f1f978d779b89896a6f89f85726fd7cebd97d5303a12bc6f",
+    "archive": "archive/Unity兼容版_2019-2025_1.1.0/Editor/VFXPrefabThumbnailWindow.cs.txt",
+    "archive_sha256": "6842837f1cae9543f1f978d779b89896a6f89f85726fd7cebd97d5303a12bc6f",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "Unity兼容版_2019-2025_1.1.0/Editor/VFXTextureAdjust.cs",
+    "source_sha256": "bb3f9a2d81cd33343db1d12dac52a993195e2d782d93748514742c5c96f6d830",
+    "archive": "archive/Unity兼容版_2019-2025_1.1.0/Editor/VFXTextureAdjust.cs.txt",
+    "archive_sha256": "bb3f9a2d81cd33343db1d12dac52a993195e2d782d93748514742c5c96f6d830",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "Unity兼容版_2019-2025_1.1.0/Editor/VFXThumbnailPreview.cs",
+    "source_sha256": "d4e256c8ac3ca47b3b90bfeaa559ae5b60ceae6a4db0482c344c91457de3a609",
+    "archive": "archive/Unity兼容版_2019-2025_1.1.0/Editor/VFXThumbnailPreview.cs.txt",
+    "archive_sha256": "d4e256c8ac3ca47b3b90bfeaa559ae5b60ceae6a4db0482c344c91457de3a609",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "Unity兼容版_2019-2025_1.1.0/Editor/VFXThumbnailStore.cs",
+    "source_sha256": "c7197d721e95714d962c5c1d46e4f44b4b41569a532a3dd458f562556aad5152",
+    "archive": "archive/Unity兼容版_2019-2025_1.1.0/Editor/VFXThumbnailStore.cs.txt",
+    "archive_sha256": "c7197d721e95714d962c5c1d46e4f44b4b41569a532a3dd458f562556aad5152",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "Unity兼容版_2019-2025_1.1.0/Runtime/BulletTimeController.cs",
+    "source_sha256": "1905955cc44beed6745b1ee418e3ff92dcb6345b68167d7cac113854817116ed",
+    "archive": "archive/Unity兼容版_2019-2025_1.1.0/Runtime/BulletTimeController.cs.txt",
+    "archive_sha256": "1905955cc44beed6745b1ee418e3ff92dcb6345b68167d7cac113854817116ed",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "Unity兼容版_2019-2025_1.1.0/Runtime/EffectDelayHelper.cs",
+    "source_sha256": "53393b4d67a6aff8cb118e98af5eef0b4ee53cccfb850a18524ebbc5b9c4f476",
+    "archive": "archive/Unity兼容版_2019-2025_1.1.0/Runtime/EffectDelayHelper.cs.txt",
+    "archive_sha256": "53393b4d67a6aff8cb118e98af5eef0b4ee53cccfb850a18524ebbc5b9c4f476",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "Unity兼容版_2019-2025_1.1.0/Runtime/EffectDelayRunner.cs",
+    "source_sha256": "5d913da79dc90dd9f7230fa5cf4170a5599ee4648568c6ec1a21003a3b92f1cc",
+    "archive": "archive/Unity兼容版_2019-2025_1.1.0/Runtime/EffectDelayRunner.cs.txt",
+    "archive_sha256": "5d913da79dc90dd9f7230fa5cf4170a5599ee4648568c6ec1a21003a3b92f1cc",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "Unity兼容版_2019-2025_1.1.0/Runtime/ParticleSystemEditorExtension.cs",
+    "source_sha256": "10cc54a4e12de294e2c2005361d647518e20c7ac68e7613e87ddf28cc46dda8f",
+    "archive": "archive/Unity兼容版_2019-2025_1.1.0/Runtime/ParticleSystemEditorExtension.cs.txt",
+    "archive_sha256": "10cc54a4e12de294e2c2005361d647518e20c7ac68e7613e87ddf28cc46dda8f",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "Unity兼容版_2019-2025_1.1.0/Runtime/ScreenColorControl.cs",
+    "source_sha256": "bbe300f3977dc0962d502aad7c57539671f3e7e79bc5537bc965813968e1d616",
+    "archive": "archive/Unity兼容版_2019-2025_1.1.0/Runtime/ScreenColorControl.cs.txt",
+    "archive_sha256": "bbe300f3977dc0962d502aad7c57539671f3e7e79bc5537bc965813968e1d616",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "Unity兼容版_2019-2025_1.1.0/使用说明.md",
+    "source_sha256": "075623126a289350ae25ab641a64eacda53691b4a573549c47a8e67ea180c146",
+    "archive": "archive/Unity兼容版_2019-2025_1.1.0/使用说明.md",
+    "archive_sha256": "075623126a289350ae25ab641a64eacda53691b4a573549c47a8e67ea180c146",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "Unity兼容版_2019-2025_1.1.0/兼容检查结果.md",
+    "source_sha256": "79a8962bce98429c6d8a5d9bfdfcbf207280d7b136c6c539bad6cfb38509fa98",
+    "archive": "archive/Unity兼容版_2019-2025_1.1.0/兼容检查结果.md",
+    "archive_sha256": "79a8962bce98429c6d8a5d9bfdfcbf207280d7b136c6c539bad6cfb38509fa98",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "Unity兼容版_2019-2025_1.1.0/验证证据/compile-results.json",
+    "source_sha256": "f6a62080968f2caa2f77641bae14020cd69279568cfd228a0d9e2a9b78d68f9e",
+    "archive": "archive/Unity兼容版_2019-2025_1.1.0/验证证据/compile-results.json",
+    "archive_sha256": "0100888c178778f6f7ffa0b0d0e34fe6707ec98bcb078504fe32d4664eeb4f39",
+    "treatment": "local installation paths redacted"
+  },
+  {
+    "source": "Unity兼容版_2019-2025_1.1.0/验证证据/source-sha256.json",
+    "source_sha256": "fd56bea3536b864abd6312badc2aa138ec1078a8cfc207049fd2d4a4b165e06f",
+    "archive": "archive/Unity兼容版_2019-2025_1.1.0/验证证据/source-sha256.json",
+    "archive_sha256": "fd56bea3536b864abd6312badc2aa138ec1078a8cfc207049fd2d4a4b165e06f",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "Unity兼容版_2019-2025_1.1.0/验证证据/unity-2022.3.62f3.txt",
+    "source_sha256": "ec195fd4d9e999dcc2ac3796cdb595cd4146be793cd3af7885cf70f591353c26",
+    "archive": "archive/Unity兼容版_2019-2025_1.1.0/验证证据/unity-2022.3.62f3.txt",
+    "archive_sha256": "ec195fd4d9e999dcc2ac3796cdb595cd4146be793cd3af7885cf70f591353c26",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "VFXPrefabThumbnail_1.0.0/Editor/VFXPrefabThumbnailWindow.cs",
+    "source_sha256": "415b3be00b3b4c9e9adf7eb70c7c203765b9d98658b18ff2781c2c3f49989b0f",
+    "archive": "archive/VFXPrefabThumbnail_1.0.0/Editor/VFXPrefabThumbnailWindow.cs.txt",
+    "archive_sha256": "415b3be00b3b4c9e9adf7eb70c7c203765b9d98658b18ff2781c2c3f49989b0f",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "VFXPrefabThumbnail_1.0.0/Editor/VFXThumbnailPreview.cs",
+    "source_sha256": "1e0586dbb1c70d55d904fc5d9deb5a92b49255f2b132f5a0a4f3445af291550e",
+    "archive": "archive/VFXPrefabThumbnail_1.0.0/Editor/VFXThumbnailPreview.cs.txt",
+    "archive_sha256": "1e0586dbb1c70d55d904fc5d9deb5a92b49255f2b132f5a0a4f3445af291550e",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "VFXPrefabThumbnail_1.0.0/Editor/VFXThumbnailStore.cs",
+    "source_sha256": "b920d6176a7a1160ed0177a077dff932de7953f739dd4067de264368d3c14aa9",
+    "archive": "archive/VFXPrefabThumbnail_1.0.0/Editor/VFXThumbnailStore.cs.txt",
+    "archive_sha256": "b920d6176a7a1160ed0177a077dff932de7953f739dd4067de264368d3c14aa9",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "VFXPrefabThumbnail_1.0.0/使用说明.md",
+    "source_sha256": "ddbde692cee1998304e0a5f9ca9b00c41f4d5d2e6968da0ef9cfeff7f37bc79c",
+    "archive": "archive/VFXPrefabThumbnail_1.0.0/使用说明.md",
+    "archive_sha256": "ddbde692cee1998304e0a5f9ca9b00c41f4d5d2e6968da0ef9cfeff7f37bc79c",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "VFXTextureAdjust_1.0.0/Editor/VFXTextureAdjust.cs",
+    "source_sha256": "bb3f9a2d81cd33343db1d12dac52a993195e2d782d93748514742c5c96f6d830",
+    "archive": "archive/VFXTextureAdjust_1.0.0/Editor/VFXTextureAdjust.cs.txt",
+    "archive_sha256": "bb3f9a2d81cd33343db1d12dac52a993195e2d782d93748514742c5c96f6d830",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "VFXTextureAdjust_1.0.0/使用说明.md",
+    "source_sha256": "23473b8b969cf009fc369fa328abde8cc87f9e7476601b31fc35c24c123b58b2",
+    "archive": "archive/VFXTextureAdjust_1.0.0/使用说明.md",
+    "archive_sha256": "23473b8b969cf009fc369fa328abde8cc87f9e7476601b31fc35c24c123b58b2",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "修改版_20260925/BulletTimeController.cs",
+    "source_sha256": "e5d92f705e9baf08638af7b7e2ed2c8f7426c0bf6313b85e21583c3837b774f0",
+    "archive": "archive/修改版_20260925/BulletTimeController.cs.txt",
+    "archive_sha256": "e5d92f705e9baf08638af7b7e2ed2c8f7426c0bf6313b85e21583c3837b774f0",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "修改版_20260925/BulletTimeController.cs.meta",
+    "source_sha256": "34b2b2a6941c4f0683a47fd075972e00e3c49a60836878b47f97adf13059ba6d",
+    "archive": "archive/修改版_20260925/BulletTimeController.cs.meta.txt",
+    "archive_sha256": "34b2b2a6941c4f0683a47fd075972e00e3c49a60836878b47f97adf13059ba6d",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "修改版_20260925/ChangeName.cs",
+    "source_sha256": "7c0055f96cc1d29a06220866540a0c2ea01ea846439e7ccca83056afc56ceb2e",
+    "archive": "archive/修改版_20260925/ChangeName.cs.txt",
+    "archive_sha256": "7c0055f96cc1d29a06220866540a0c2ea01ea846439e7ccca83056afc56ceb2e",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "修改版_20260925/ChangeName.cs.meta",
+    "source_sha256": "5be19e4c587a0094fb361f6b681b86dd623480ceba54b4375678297fc78172ac",
+    "archive": "archive/修改版_20260925/ChangeName.cs.meta.txt",
+    "archive_sha256": "5be19e4c587a0094fb361f6b681b86dd623480ceba54b4375678297fc78172ac",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "修改版_20260925/DVClear.cs",
+    "source_sha256": "afe387aef69d73c75b3e48ee0b26f193b9d77d7e98303ef3ed7d5debd1cbfff4",
+    "archive": "archive/修改版_20260925/DVClear.cs.txt",
+    "archive_sha256": "afe387aef69d73c75b3e48ee0b26f193b9d77d7e98303ef3ed7d5debd1cbfff4",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "修改版_20260925/DVClear.cs.meta",
+    "source_sha256": "d9533cab5508cd463430f703836081c9ba6e155cdda571701e75f85c86edccac",
+    "archive": "archive/修改版_20260925/DVClear.cs.meta.txt",
+    "archive_sha256": "d9533cab5508cd463430f703836081c9ba6e155cdda571701e75f85c86edccac",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "修改版_20260925/EffectDelayHelper.cs",
+    "source_sha256": "53393b4d67a6aff8cb118e98af5eef0b4ee53cccfb850a18524ebbc5b9c4f476",
+    "archive": "archive/修改版_20260925/EffectDelayHelper.cs.txt",
+    "archive_sha256": "53393b4d67a6aff8cb118e98af5eef0b4ee53cccfb850a18524ebbc5b9c4f476",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "修改版_20260925/EffectDelayHelper.cs.meta",
+    "source_sha256": "3990ac4941abb4a958b8a279c74c04a580c8946c0d006a34c8f89b113427bb40",
+    "archive": "archive/修改版_20260925/EffectDelayHelper.cs.meta.txt",
+    "archive_sha256": "3990ac4941abb4a958b8a279c74c04a580c8946c0d006a34c8f89b113427bb40",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "修改版_20260925/EffectDelayRunner.cs",
+    "source_sha256": "5d913da79dc90dd9f7230fa5cf4170a5599ee4648568c6ec1a21003a3b92f1cc",
+    "archive": "archive/修改版_20260925/EffectDelayRunner.cs.txt",
+    "archive_sha256": "5d913da79dc90dd9f7230fa5cf4170a5599ee4648568c6ec1a21003a3b92f1cc",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "修改版_20260925/EffectDelayRunner.cs.meta",
+    "source_sha256": "48fb71da0141d84a6ed15ed5c4ac37a94b12dad28b1325ed64d7c575036db14c",
+    "archive": "archive/修改版_20260925/EffectDelayRunner.cs.meta.txt",
+    "archive_sha256": "48fb71da0141d84a6ed15ed5c4ac37a94b12dad28b1325ed64d7c575036db14c",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "修改版_20260925/FindReference.cs",
+    "source_sha256": "50362dec567c3829a9ca79a89e7c3eac3a07308e34f5df081760a99a66129a51",
+    "archive": "archive/修改版_20260925/FindReference.cs.txt",
+    "archive_sha256": "50362dec567c3829a9ca79a89e7c3eac3a07308e34f5df081760a99a66129a51",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "修改版_20260925/FindReference.cs.meta",
+    "source_sha256": "8628ee229824f19e54204cdc1bfc1dca3d368a31bb6e0e91808da466d570b42d",
+    "archive": "archive/修改版_20260925/FindReference.cs.meta.txt",
+    "archive_sha256": "8628ee229824f19e54204cdc1bfc1dca3d368a31bb6e0e91808da466d570b42d",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "修改版_20260925/ScreenColorControl.cs",
+    "source_sha256": "bfa9756d01442e7260a4c07f7d175aa7e460d78b6c00c35ffa33b4c34608fa4a",
+    "archive": "archive/修改版_20260925/ScreenColorControl.cs.txt",
+    "archive_sha256": "bfa9756d01442e7260a4c07f7d175aa7e460d78b6c00c35ffa33b4c34608fa4a",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "修改版_20260925/ScreenColorControl.cs.meta",
+    "source_sha256": "44c410db5be6d40fc0fd6f9e647fc8a4a0d02b35fb2e9b6216024b45daa67177",
+    "archive": "archive/修改版_20260925/ScreenColorControl.cs.meta.txt",
+    "archive_sha256": "44c410db5be6d40fc0fd6f9e647fc8a4a0d02b35fb2e9b6216024b45daa67177",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "修改版_20260925/使用说明.md",
+    "source_sha256": "b02f4c4fe51f3c3337d0af72d79dd8ac83f1d2b1b280d94ea6380f1856919486",
+    "archive": "archive/修改版_20260925/使用说明.md",
+    "archive_sha256": "b02f4c4fe51f3c3337d0af72d79dd8ac83f1d2b1b280d94ea6380f1856919486",
+    "treatment": "byte-identical"
+  },
+  {
+    "source": "修改版_20260925/原件校验.json",
+    "source_sha256": "c0be7cee21f7efe36498942759d93ceb2e171b3ee322d89b54d07925d4b34737",
+    "archive": "archive/修改版_20260925/原件校验.json",
+    "archive_sha256": "c039f27cb7a1ea885b62ea413c26f1c9518440aad7a02a0616b18deeb5052226",
+    "treatment": "local source paths reduced to filenames"
+  }
+]

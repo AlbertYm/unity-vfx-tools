@@ -1,0 +1,271 @@
+#if UNITY_EDITOR
+using System;
+using System.Collections.Generic;
+using UnityEditor;
+using UnityEngine;
+using Object = UnityEngine.Object;
+
+namespace EffectTools.PrefabThumbnails
+{
+    // Builds only known built-in visual components. User scripts are never instantiated.
+    public sealed class VFXThumbnailPreview : IDisposable
+    {
+        readonly PreviewRenderUtility preview;
+        readonly List<Material> ownedMaterials = new List<Material>();
+        readonly Dictionary<Object, Object> mapping = new Dictionary<Object, Object>();
+        readonly List<KeyValuePair<Component, Component>> components = new List<KeyValuePair<Component, Component>>();
+        readonly List<Transform> transforms = new List<Transform>();
+        readonly List<Vector3> positions = new List<Vector3>();
+        readonly List<Quaternion> rotations = new List<Quaternion>();
+        readonly List<Vector3> scales = new List<Vector3>();
+        readonly HashSet<ParticleSystem> subEmitters = new HashSet<ParticleSystem>();
+        readonly ParticleSystem[] particles;
+        public readonly GameObject Root;
+        public int IgnoredScripts { get; private set; }
+        public int UnsupportedVisuals { get; private set; }
+        public int ParticleSystems { get { return particles.Length; } }
+        public int ParticleCount { get { int count = 0; foreach (var p in particles) count += p.particleCount; return count; } }
+
+        public VFXThumbnailPreview(GameObject source)
+        {
+            preview = new PreviewRenderUtility();
+            try
+            {
+                preview.camera.fieldOfView = 35f;
+                preview.camera.clearFlags = CameraClearFlags.SolidColor;
+                preview.camera.allowHDR = false;
+                preview.camera.allowMSAA = true;
+                preview.camera.cullingMask = ~0;
+                preview.ambientColor = new Color(.5f, .5f, .5f);
+                preview.lights[0].intensity = 1.1f;
+                preview.lights[0].transform.rotation = Quaternion.Euler(40f, 40f, 0f);
+                preview.lights[1].intensity = .7f;
+                Root = CopyTree(source.transform, null);
+                preview.AddSingleGO(Root);
+                CopyComponents(source.transform);
+                foreach (var pair in components) EditorUtility.CopySerialized(pair.Key, pair.Value);
+                foreach (var pair in components) RemapReferences(pair.Value);
+                foreach (var renderer in Root.GetComponentsInChildren<Renderer>(true))
+                {
+                    var materials = renderer.sharedMaterials;
+                    for (int i = 0; i < materials.Length; i++)
+                    {
+                        if (materials[i] == null) continue;
+                        materials[i] = new Material(materials[i]) { hideFlags = HideFlags.HideAndDontSave };
+                        ownedMaterials.Add(materials[i]);
+                    }
+                    renderer.sharedMaterials = materials;
+                    if (renderer is SkinnedMeshRenderer) ((SkinnedMeshRenderer)renderer).updateWhenOffscreen = true;
+                    if (renderer is TrailRenderer) ((TrailRenderer)renderer).autodestruct = false;
+                }
+                particles = Root.GetComponentsInChildren<ParticleSystem>(true);
+                foreach (var system in particles)
+                {
+                    var main = system.main;
+                    main.playOnAwake = false;
+                    main.stopAction = ParticleSystemStopAction.None;
+                    main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
+                    main.useUnscaledTime = false;
+                    for (int i = 0; i < system.subEmitters.subEmittersCount; i++)
+                        if (system.subEmitters.GetSubEmitterSystem(i) != null)
+                            subEmitters.Add(system.subEmitters.GetSubEmitterSystem(i));
+                }
+                foreach (Transform transform in Root.GetComponentsInChildren<Transform>(true))
+                {
+                    transforms.Add(transform); positions.Add(transform.localPosition);
+                    rotations.Add(transform.localRotation); scales.Add(transform.localScale);
+                }
+                Root.SetActive(true);
+            }
+            catch { Dispose(); throw; }
+        }
+
+        GameObject CopyTree(Transform source, Transform parent)
+        {
+            var go = new GameObject(source.name);
+            go.SetActive(false);
+            go.hideFlags = HideFlags.HideAndDontSave;
+            go.layer = source.gameObject.layer;
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = parent == null ? Vector3.zero : source.localPosition;
+            go.transform.localRotation = source.localRotation;
+            go.transform.localScale = source.localScale;
+            mapping[source.gameObject] = go; mapping[source] = go.transform;
+            foreach (Transform child in source) CopyTree(child, go.transform);
+            if (parent != null) go.SetActive(source.gameObject.activeSelf);
+            return go;
+        }
+
+        static bool Supported(Component c)
+        {
+            return c is MeshFilter || c is MeshRenderer || c is SkinnedMeshRenderer || c is SpriteRenderer ||
+                   c is ParticleSystem || c is ParticleSystemRenderer || c is LineRenderer || c is TrailRenderer;
+        }
+
+        void CopyComponents(Transform source)
+        {
+            var target = (GameObject)mapping[source.gameObject];
+            if (source.GetComponent<ParticleSystem>() != null) target.AddComponent<ParticleSystem>();
+            // ParticleSystem owns a required renderer. Reuse it instead of adding a duplicate.
+            foreach (var component in source.GetComponents<Component>())
+            {
+                if (component == null) { IgnoredScripts++; continue; }
+                if (component is MonoBehaviour) { IgnoredScripts++; continue; }
+                if (component is Transform) continue;
+                if (!Supported(component))
+                {
+                    if (component.GetType().FullName.Contains("VisualEffect") || component is Canvas) UnsupportedVisuals++;
+                    continue;
+                }
+                var copy = target.GetComponent(component.GetType());
+                // Unity's missing-object sentinel is not a CLR null: do not use ??.
+                if (copy == null) copy = target.AddComponent(component.GetType());
+                mapping[component] = copy;
+                components.Add(new KeyValuePair<Component, Component>(component, copy));
+            }
+            foreach (Transform child in source) CopyComponents(child);
+        }
+
+        void RemapReferences(Component component)
+        {
+            using (var serialized = new SerializedObject(component))
+            {
+                var iterator = serialized.GetIterator();
+                while (iterator.Next(true))
+                {
+                    if (iterator.propertyType != SerializedPropertyType.ObjectReference || iterator.propertyPath == "m_GameObject") continue;
+                    Object reference = iterator.objectReferenceValue, replacement;
+                    if (reference != null && mapping.TryGetValue(reference, out replacement)) iterator.objectReferenceValue = replacement;
+                }
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+            }
+        }
+
+        public void Simulate(float seconds, int seed, AnimationClip clip)
+        {
+            for (int i = 0; i < transforms.Count; i++)
+            {
+                transforms[i].localPosition = positions[i]; transforms[i].localRotation = rotations[i]; transforms[i].localScale = scales[i];
+            }
+            foreach (var system in particles)
+            {
+                system.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+                system.useAutoRandomSeed = false;
+                system.randomSeed = (uint)Mathf.Max(1, seed);
+            }
+            seconds = Mathf.Clamp(seconds, 0f, 30f);
+            // Reconstruct from the start for reproducible backwards scrubbing, without changing global Time.
+            if (clip == null)
+            {
+                foreach (var system in particles)
+                    if (system.gameObject.activeInHierarchy && !subEmitters.Contains(system)) system.Simulate(seconds, false, true, true);
+            }
+            else
+            {
+                clip.SampleAnimation(Root, 0f);
+                float elapsed = 0f;
+                while (elapsed < seconds)
+                {
+                    float step = Mathf.Min(1f / 60f, seconds - elapsed); elapsed += step;
+                    clip.SampleAnimation(Root, Mathf.Min(elapsed, clip.length));
+                    foreach (var system in particles)
+                        if (system.gameObject.activeInHierarchy && !subEmitters.Contains(system)) system.Simulate(step, false, elapsed <= step, false);
+                }
+            }
+            foreach (var system in particles) system.Pause(false);
+        }
+
+        public Bounds GetBounds()
+        {
+            Bounds result = new Bounds(Root.transform.position, Vector3.one);
+            bool any = false;
+            foreach (var renderer in Root.GetComponentsInChildren<Renderer>())
+            {
+                if (!renderer.enabled) continue;
+                var b = renderer.bounds;
+                if (renderer is ParticleSystemRenderer)
+                {
+                    var system = renderer.GetComponent<ParticleSystem>();
+                    if (system == null || system.particleCount == 0) continue;
+                    // Native renderer bounds can cover the whole lifetime, making the chosen frame tiny.
+                    // Fit the particles actually alive at this selected time instead.
+                    var alive = new ParticleSystem.Particle[system.particleCount];
+                    int count = system.GetParticles(alive);
+                    var main = system.main;
+                    Transform space = main.simulationSpace == ParticleSystemSimulationSpace.Custom
+                        ? main.customSimulationSpace : system.transform;
+                    bool world = main.simulationSpace == ParticleSystemSimulationSpace.World;
+                    float sizeScale = 1f;
+                    if (!world && space != null)
+                        sizeScale = Mathf.Max(Mathf.Abs(space.lossyScale.x), Mathf.Abs(space.lossyScale.y), Mathf.Abs(space.lossyScale.z));
+                    for (int i = 0; i < count; i++)
+                    {
+                        Vector3 point = world || space == null ? alive[i].position : space.TransformPoint(alive[i].position);
+                        float radius = Mathf.Max(.001f, alive[i].GetCurrentSize3D(system).magnitude * .5f * sizeScale);
+                        var particleBounds = new Bounds(point, Vector3.one * radius * 2f);
+                        if (i == 0) b = particleBounds; else b.Encapsulate(particleBounds);
+                    }
+                }
+                if (float.IsNaN(b.size.sqrMagnitude) || float.IsInfinity(b.size.sqrMagnitude) || b.size.sqrMagnitude < .000001f) continue;
+                if (!any) { result = b; any = true; } else result.Encapsulate(b);
+            }
+            return result;
+        }
+
+        public void Fit(ThumbnailSettings settings)
+        {
+            Bounds bounds = GetBounds(); settings.center = bounds.center;
+            settings.distance = Mathf.Max(.1f, bounds.extents.magnitude / Mathf.Sin(17.5f * Mathf.Deg2Rad) * 1.25f);
+        }
+
+        public Texture Render(Rect rect, ThumbnailSettings settings)
+        {
+            var camera = preview.camera;
+            var rotation = Quaternion.Euler(settings.orbit.y, settings.orbit.x, 0f);
+            camera.transform.rotation = rotation;
+            camera.transform.position = settings.center - rotation * Vector3.forward * settings.distance;
+            camera.orthographic = settings.orthographic;
+            camera.orthographicSize = Mathf.Max(.01f, settings.distance * Mathf.Tan(17.5f * Mathf.Deg2Rad));
+            camera.nearClipPlane = Mathf.Max(.001f, settings.distance / 1000f);
+            camera.farClipPlane = Mathf.Max(1000f, settings.distance * 100f);
+            preview.BeginPreview(rect, GUIStyle.none);
+            Texture result = null;
+            try
+            {
+                // BeginPreview resets camera background on some editor versions.
+                Color background = new Color(settings.background.r, settings.background.g, settings.background.b, 1f);
+                camera.backgroundColor = QualitySettings.activeColorSpace == ColorSpace.Linear ? background.linear : background;
+                camera.aspect = rect.width / Mathf.Max(1f, rect.height);
+                camera.pixelRect = new Rect(0, 0, camera.targetTexture.width, camera.targetTexture.height);
+                // Required for projects using URP/HDRP. No direct package dependency.
+                preview.Render(true, false);
+            }
+            finally { result = preview.EndPreview(); }
+            return result;
+        }
+
+        public byte[] Capture(ThumbnailSettings settings)
+        {
+            var image = Render(new Rect(0, 0, 512, 512), settings);
+            var target = RenderTexture.GetTemporary(512, 512, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            var old = RenderTexture.active;
+            Texture2D copy = null;
+            try
+            {
+                Graphics.Blit(image, target); RenderTexture.active = target;
+                copy = new Texture2D(512, 512, TextureFormat.RGB24, false);
+                copy.ReadPixels(new Rect(0, 0, 512, 512), 0, 0); copy.Apply();
+                return copy.EncodeToPNG();
+            }
+            finally { RenderTexture.active = old; if (copy != null) Object.DestroyImmediate(copy); RenderTexture.ReleaseTemporary(target); }
+        }
+
+        public void Dispose()
+        {
+            preview.Cleanup();
+            foreach (var material in ownedMaterials) if (material != null) Object.DestroyImmediate(material);
+            ownedMaterials.Clear();
+        }
+    }
+}
+#endif

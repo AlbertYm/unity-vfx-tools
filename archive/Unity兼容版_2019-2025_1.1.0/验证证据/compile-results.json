@@ -1,0 +1,128 @@
+[
+  {
+    "version": "2020.2.2f1c1_e7e650540bb3",
+    "mode": "editor",
+    "exitCode": 0,
+    "references": "<Unity installation>/Editor/Data",
+    "language": "7.3"
+  },
+  {
+    "version": "2020.2.2f1c1_e7e650540bb3",
+    "mode": "player",
+    "exitCode": 0,
+    "references": "<Unity installation>/Editor/Data",
+    "language": "7.3"
+  },
+  {
+    "version": "2020.2.2f1c1_e7e650540bb3",
+    "mode": "legacy-time",
+    "exitCode": 0,
+    "references": "<Unity installation>/Editor/Data",
+    "language": "7.3"
+  },
+  {
+    "version": "2020.3.26f1_7298b473bc1a",
+    "mode": "editor",
+    "exitCode": 0,
+    "references": "<Unity installation>/Editor/Data",
+    "language": "7.3"
+  },
+  {
+    "version": "2020.3.26f1_7298b473bc1a",
+    "mode": "player",
+    "exitCode": 0,
+    "references": "<Unity installation>/Editor/Data",
+    "language": "7.3"
+  },
+  {
+    "version": "2020.3.26f1_7298b473bc1a",
+    "mode": "legacy-time",
+    "exitCode": 0,
+    "references": "<Unity installation>/Editor/Data",
+    "language": "7.3"
+  },
+  {
+    "version": "2020.3.26f1c1_cf0e0a163043",
+    "mode": "editor",
+    "exitCode": 0,
+    "references": "<Unity installation>/Editor/Data",
+    "language": "7.3"
+  },
+  {
+    "version": "2020.3.26f1c1_cf0e0a163043",
+    "mode": "player",
+    "exitCode": 0,
+    "references": "<Unity installation>/Editor/Data",
+    "language": "7.3"
+  },
+  {
+    "version": "2020.3.26f1c1_cf0e0a163043",
+    "mode": "legacy-time",
+    "exitCode": 0,
+    "references": "<Unity installation>/Editor/Data",
+    "language": "7.3"
+  },
+  {
+    "version": "2022.3.4f1_35713cd46cd7",
+    "mode": "editor",
+    "exitCode": 0,
+    "references": "<Unity installation>/Editor/Data",
+    "language": "7.3"
+  },
+  {
+    "version": "2022.3.4f1_35713cd46cd7",
+    "mode": "player",
+    "exitCode": 0,
+    "references": "<Unity installation>/Editor/Data",
+    "language": "7.3"
+  },
+  {
+    "version": "2022.3.4f1_35713cd46cd7",
+    "mode": "legacy-time",
+    "exitCode": 0,
+    "references": "<Unity installation>/Editor/Data",
+    "language": "7.3"
+  },
+  {
+    "version": "2022.3.50f1_c3db7f8bf9b1",
+    "mode": "editor",
+    "exitCode": 0,
+    "references": "<Unity installation>/Editor/Data",
+    "language": "7.3"
+  },
+  {
+    "version": "2022.3.50f1_c3db7f8bf9b1",
+    "mode": "player",
+    "exitCode": 0,
+    "references": "<Unity installation>/Editor/Data",
+    "language": "7.3"
+  },
+  {
+    "version": "2022.3.50f1_c3db7f8bf9b1",
+    "mode": "legacy-time",
+    "exitCode": 0,
+    "references": "<Unity installation>/Editor/Data",
+    "language": "7.3"
+  },
+  {
+    "version": "2022.3.62f3_96770f904ca7",
+    "mode": "editor",
+    "exitCode": 0,
+    "references": "<Unity installation>/Editor/Data",
+    "language": "7.3"
+  },
+  {
+    "version": "2022.3.62f3_96770f904ca7",
+    "mode": "player",
+    "exitCode": 0,
+    "references": "<Unity installation>/Editor/Data",
+    "language": "7.3"
+  },
+  {
+    "version": "2022.3.62f3_96770f904ca7",
+    "mode": "legacy-time",
+    "exitCode": 0,
+    "references": "<Unity installation>/Editor/Data",
+    "language": "7.3"
+  }
+]

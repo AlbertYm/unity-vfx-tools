@@ -1,0 +1,83 @@
+#if UNITY_EDITOR
+using UnityEngine;
+using UnityEditor;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.Collections.Generic;
+
+public class FindReferences : EditorWindow
+{
+    private Object selectedObject;
+    private List<string> references = new List<string>();
+
+    [MenuItem("Unity Tool/Reference Checker")]
+    public static void ShowWindow()
+    {
+        GetWindow<FindReferences>("Reference Checker");
+    }
+
+    private void OnGUI()
+    {
+        GUILayout.Label("Reference Checker", EditorStyles.boldLabel);
+        selectedObject = EditorGUILayout.ObjectField("Object to Check", selectedObject, typeof(Object), false);
+
+        if (GUILayout.Button("Find References"))
+        {
+            FindReferencesForObject(selectedObject);
+        }
+
+        if (references.Count > 0)
+        {
+            GUILayout.Label("References Found:", EditorStyles.boldLabel);
+            foreach (var reference in references)
+            {
+                if (GUILayout.Button(reference))
+                {
+                    EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<Object>(reference));
+                }
+            }
+        }
+    }
+
+    private void FindReferencesForObject(Object obj)
+    {
+        references.Clear();
+        if (obj == null) return;
+
+        string assetPath = AssetDatabase.GetAssetPath(obj);
+        if (string.IsNullOrEmpty(assetPath)) return;
+
+        string guid = AssetDatabase.AssetPathToGUID(assetPath);
+
+        List<string> withoutExtensions = new List<string>() { ".prefab", ".unity", ".mat", ".asset" };
+        string[] files = Directory.GetFiles(Application.dataPath, "*.*", SearchOption.AllDirectories)
+            .Where(s => withoutExtensions.Contains(Path.GetExtension(s).ToLower())).ToArray();
+
+        for (int i = 0; i < files.Length; i++)
+        {
+            string file = files[i];
+            if (i % 20 == 0)
+            {
+                bool isCancel = EditorUtility.DisplayCancelableProgressBar("Searching for References", file, (float)i / files.Length);
+                if (isCancel)
+                {
+                    break;
+                }
+            }
+
+            var input = File.ReadAllText(file);
+            if (Regex.IsMatch(input, guid))
+            {
+                var relativePath = "Assets" + file.Substring(Application.dataPath.Length);
+                references.Add(relativePath);
+                Debug.Log($"Object: {obj.name}, Referenced by: {relativePath}", AssetDatabase.LoadAssetAtPath<Object>(relativePath));
+            }
+        }
+
+        EditorUtility.ClearProgressBar();
+        Debug.Log("Reference search completed.");
+    }
+}
+
+#endif

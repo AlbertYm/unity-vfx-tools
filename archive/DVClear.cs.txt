@@ -1,0 +1,612 @@
+using UnityEngine;
+using UnityEditor;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+
+// 使用命名空间防止与 GameSetupWindow.cs 中的类名冲突
+namespace EffectTools.Cleanup
+{
+    public class DVClear : EditorWindow
+    {
+        private const int MaxReferenceDepth = 8;
+
+        private Object selectedTarget;
+        private List<AssetResult> scanResults = new List<AssetResult>();
+        private Vector2 scrollPos;
+        private bool hideUsed = false;
+        private string searchFilter = "";
+        private bool isSearchingDependencies = false; // 默认为特效师最常用的“反向查找”
+
+        private int detailIndex = -1;
+
+        // 引用树状态。节点展开状态与扫描缓存分离，收起详情后再次打开仍保留原位置。
+        private readonly HashSet<string> expandedReferenceNodes = new HashSet<string>();
+        private readonly HashSet<string> selectedReferencePaths = new HashSet<string>();
+        private readonly Dictionary<string, List<string>> nestedReferenceCache =
+            new Dictionary<string, List<string>>();
+        private Dictionary<string, List<string>> reverseLookupCache;
+
+        // 定义结果数据结构
+        private struct AssetResult
+        {
+            public string guid;
+            public string path;
+            public string name;
+            public System.Type type;
+            public int refCount;
+            public bool isSelected;
+            public List<string> references;
+        }
+
+        [MenuItem("Effect Tools/DV Clear")]
+        public static void ShowWindow()
+        {
+            // 使用完整路径获取窗口，确保唯一性
+            DVClear window = GetWindow<DVClear>("DV Clear - 资源整理助手");
+            window.minSize = new Vector2(650, 600);
+            window.Show();
+        }
+
+        private void OnGUI()
+        {
+            // --- 顶部控制区 ---
+            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.Space(5);
+            GUILayout.Label("DV Clear | 资源引用与清理工具", EditorStyles.boldLabel);
+            EditorGUILayout.Space(5);
+
+            EditorGUILayout.BeginHorizontal();
+            selectedTarget = EditorGUILayout.ObjectField("目标(文件夹/文件)", selectedTarget, typeof(Object), false);
+            if (GUILayout.Button("开始扫描", GUILayout.Width(100), GUILayout.Height(20)))
+            {
+                ScanAssets();
+            }
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.BeginHorizontal();
+            string[] modes = { "查我用了谁 (正向)", "查谁用了我 (反向)" };
+            int modeIndex = isSearchingDependencies ? 0 : 1;
+            int newModeIndex = GUILayout.Toolbar(modeIndex, modes);
+            if (newModeIndex != modeIndex)
+            {
+                isSearchingDependencies = (newModeIndex == 0);
+                if (scanResults.Count > 0)
+                {
+                    ScanAssets(); // 模式切换时自动刷新
+                }
+            }
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.Space(5);
+            EditorGUILayout.EndVertical();
+
+            // --- 过滤工具栏 ---
+            EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
+            searchFilter = EditorGUILayout.TextField("搜索:", searchFilter, EditorStyles.toolbarSearchField);
+            hideUsed = GUILayout.Toggle(hideUsed, "只看未引用", EditorStyles.toolbarButton);
+            if (GUILayout.Button("按引用排序", EditorStyles.toolbarButton))
+            {
+                scanResults = scanResults.OrderBy(r => r.refCount).ToList();
+                detailIndex = -1;
+            }
+            if (GUILayout.Button("收起全部引用树", EditorStyles.toolbarButton, GUILayout.Width(105)))
+            {
+                expandedReferenceNodes.Clear();
+            }
+            EditorGUILayout.EndHorizontal();
+
+            DrawHeader();
+
+            // --- 列表展示区 ---
+            scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
+            if (scanResults.Count == 0)
+            {
+                EditorGUILayout.HelpBox("请拖入文件夹或资源并点击“开始扫描”", MessageType.Info);
+            }
+
+            for (int i = 0; i < scanResults.Count; i++)
+            {
+                AssetResult res = scanResults[i];
+
+                // 过滤逻辑
+                if (hideUsed && res.refCount > 0)
+                {
+                    continue;
+                }
+
+                if (!string.IsNullOrEmpty(searchFilter) &&
+                    res.name.IndexOf(searchFilter, System.StringComparison.OrdinalIgnoreCase) < 0)
+                {
+                    continue;
+                }
+
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                EditorGUILayout.BeginHorizontal();
+
+                res.isSelected = EditorGUILayout.Toggle(res.isSelected, GUILayout.Width(20));
+
+                // 颜色逻辑：未引用标红，当前选中详情标黄
+                GUI.color = (detailIndex == i) ? Color.yellow : (res.refCount == 0 ? Color.red : Color.white);
+                if (GUILayout.Button(new GUIContent(res.name, res.path), EditorStyles.label, GUILayout.Width(250)))
+                {
+                    PingAndSelectAsset(res.path);
+                }
+                GUI.color = Color.white;
+
+                string typeName = res.type != null ? res.type.Name : "Unknown";
+                EditorGUILayout.LabelField(typeName, GUILayout.Width(80));
+                EditorGUILayout.LabelField(res.refCount.ToString(), GUILayout.Width(40));
+
+                if (GUILayout.Button(detailIndex == i ? "收起" : "详情", EditorStyles.miniButton, GUILayout.Width(50)))
+                {
+                    detailIndex = (detailIndex == i) ? -1 : i;
+                }
+
+                EditorGUILayout.EndHorizontal();
+
+                // 详情展示
+                if (detailIndex == i)
+                {
+                    DrawDetailList(res);
+                }
+
+                EditorGUILayout.EndVertical();
+                scanResults[i] = res;
+            }
+            EditorGUILayout.EndScrollView();
+
+            // --- 底部操作区 ---
+            DrawFooter();
+        }
+
+        private void DrawHeader()
+        {
+            EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
+            GUILayout.Space(25);
+            EditorGUILayout.LabelField("资源名称", GUILayout.Width(250));
+            EditorGUILayout.LabelField("类型", GUILayout.Width(80));
+            EditorGUILayout.LabelField("引用数", GUILayout.Width(40));
+            EditorGUILayout.LabelField("操作");
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private void DrawDetailList(AssetResult res)
+        {
+            EditorGUILayout.BeginVertical("box");
+            if (res.references.Count == 0)
+            {
+                GUILayout.Label("  (无引用记录)", EditorStyles.centeredGreyMiniLabel);
+                EditorGUILayout.EndVertical();
+                return;
+            }
+
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Label(
+                isSearchingDependencies ? "[该资源使用的依赖]:" : "[引用该资源的物体]:",
+                EditorStyles.miniLabel);
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("收起此树", EditorStyles.miniButton, GUILayout.Width(70)))
+            {
+                string rootPrefix = res.path + ">";
+                expandedReferenceNodes.RemoveWhere(key => key.StartsWith(rootPrefix));
+            }
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.HelpBox(
+                "点击三角可继续追踪下一层引用；点击资源名称可在 Project 与 Inspector 中定位。",
+                MessageType.None);
+
+            HashSet<string> branchPaths = new HashSet<string> { res.path };
+            List<string> rootReferences = res.references
+                .Where(path => !string.IsNullOrEmpty(path))
+                .Distinct()
+                .OrderBy(path => path)
+                .ToList();
+
+            foreach (string refPath in rootReferences)
+            {
+                string nodeKey = res.path + ">" + refPath;
+                DrawReferenceNode(refPath, nodeKey, 0, branchPaths);
+            }
+
+            EditorGUILayout.EndVertical();
+        }
+
+        private void DrawReferenceNode(
+            string assetPath,
+            string nodeKey,
+            int depth,
+            HashSet<string> branchPaths)
+        {
+            bool isCycle = branchPaths.Contains(assetPath);
+            bool reachedDepthLimit = depth >= MaxReferenceDepth;
+            List<string> childReferences = isCycle
+                ? new List<string>()
+                : GetReferencesForPath(assetPath);
+            bool hasChildren = childReferences.Count > 0;
+            bool isExpanded = expandedReferenceNodes.Contains(nodeKey);
+
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Space(8 + depth * 18);
+
+            bool isSelected = selectedReferencePaths.Contains(assetPath);
+            bool newSelected = EditorGUILayout.Toggle(isSelected, GUILayout.Width(18));
+            if (newSelected != isSelected)
+            {
+                if (newSelected)
+                {
+                    selectedReferencePaths.Add(assetPath);
+                }
+                else
+                {
+                    selectedReferencePaths.Remove(assetPath);
+                }
+            }
+
+            bool oldEnabled = GUI.enabled;
+            GUI.enabled = !isCycle && !reachedDepthLimit && hasChildren;
+            string foldoutText = isExpanded ? "▼" : (hasChildren ? "▶" : "•");
+            if (GUILayout.Button(foldoutText, EditorStyles.miniButton, GUILayout.Width(22)))
+            {
+                if (isExpanded)
+                {
+                    expandedReferenceNodes.Remove(nodeKey);
+                }
+                else
+                {
+                    expandedReferenceNodes.Add(nodeKey);
+                }
+            }
+            GUI.enabled = oldEnabled;
+
+            Object asset = AssetDatabase.LoadAssetAtPath<Object>(assetPath);
+            GUIContent assetContent = EditorGUIUtility.ObjectContent(asset, asset != null ? asset.GetType() : typeof(Object));
+            if (assetContent.image != null)
+            {
+                GUILayout.Label(assetContent.image, GUILayout.Width(18), GUILayout.Height(18));
+            }
+            else
+            {
+                GUILayout.Space(20);
+            }
+
+            string displayName = Path.GetFileName(assetPath);
+            if (GUILayout.Button(new GUIContent(displayName, assetPath), EditorStyles.linkLabel))
+            {
+                PingAndSelectAsset(assetPath);
+            }
+
+            GUILayout.FlexibleSpace();
+            string typeName = asset != null ? asset.GetType().Name : "Missing";
+            EditorGUILayout.LabelField(typeName, GUILayout.Width(90));
+            EditorGUILayout.LabelField(
+                isCycle ? "循环" : childReferences.Count.ToString(),
+                GUILayout.Width(42));
+            EditorGUILayout.EndHorizontal();
+
+            if (isCycle)
+            {
+                EditorGUILayout.BeginHorizontal();
+                GUILayout.Space(38 + depth * 18);
+                GUILayout.Label("检测到循环引用，已停止继续展开。", EditorStyles.miniLabel);
+                EditorGUILayout.EndHorizontal();
+                return;
+            }
+
+            if (reachedDepthLimit && hasChildren)
+            {
+                EditorGUILayout.BeginHorizontal();
+                GUILayout.Space(38 + depth * 18);
+                GUILayout.Label(
+                    "已达到最大展开层级 " + MaxReferenceDepth + "，防止引用链过深。",
+                    EditorStyles.miniLabel);
+                EditorGUILayout.EndHorizontal();
+                return;
+            }
+
+            if (!isExpanded)
+            {
+                return;
+            }
+
+            if (!hasChildren)
+            {
+                EditorGUILayout.BeginHorizontal();
+                GUILayout.Space(38 + depth * 18);
+                GUILayout.Label("(没有下一层引用)", EditorStyles.centeredGreyMiniLabel);
+                EditorGUILayout.EndHorizontal();
+                return;
+            }
+
+            branchPaths.Add(assetPath);
+            foreach (string childPath in childReferences)
+            {
+                string childNodeKey = nodeKey + ">" + childPath;
+                DrawReferenceNode(childPath, childNodeKey, depth + 1, branchPaths);
+            }
+            branchPaths.Remove(assetPath);
+        }
+
+        private List<string> GetReferencesForPath(string assetPath)
+        {
+            List<string> cached;
+            if (nestedReferenceCache.TryGetValue(assetPath, out cached))
+            {
+                return cached;
+            }
+
+            List<string> references;
+            if (isSearchingDependencies)
+            {
+                references = AssetDatabase.GetDependencies(assetPath, false)
+                    .Where(path => path != assetPath)
+                    .ToList();
+            }
+            else
+            {
+                string guid = AssetDatabase.AssetPathToGUID(assetPath);
+                if (reverseLookupCache != null &&
+                    !string.IsNullOrEmpty(guid) &&
+                    reverseLookupCache.TryGetValue(guid, out references))
+                {
+                    references = new List<string>(references);
+                }
+                else
+                {
+                    references = new List<string>();
+                }
+            }
+
+            references = references
+                .Where(path => !string.IsNullOrEmpty(path) && path != assetPath)
+                .Distinct()
+                .OrderBy(path => path)
+                .ToList();
+            nestedReferenceCache[assetPath] = references;
+            return references;
+        }
+
+        private static void PingAndSelectAsset(string assetPath)
+        {
+            Object asset = AssetDatabase.LoadAssetAtPath<Object>(assetPath);
+            if (asset == null)
+            {
+                return;
+            }
+
+            EditorGUIUtility.PingObject(asset);
+            Selection.activeObject = asset;
+        }
+
+        private List<string> GetSelectedAssetPaths()
+        {
+            return scanResults
+                .Where(result => result.isSelected)
+                .Select(result => result.path)
+                .Concat(selectedReferencePaths)
+                .Where(path => !string.IsNullOrEmpty(path))
+                .Distinct()
+                .OrderBy(path => path)
+                .ToList();
+        }
+
+        private void DrawFooter()
+        {
+            EditorGUILayout.BeginHorizontal("box");
+            if (GUILayout.Button("全选主列表", GUILayout.Width(90)))
+            {
+                for (int i = 0; i < scanResults.Count; i++)
+                {
+                    AssetResult result = scanResults[i];
+                    result.isSelected = true;
+                    scanResults[i] = result;
+                }
+            }
+
+            if (GUILayout.Button("取消全部选择", GUILayout.Width(90)))
+            {
+                for (int i = 0; i < scanResults.Count; i++)
+                {
+                    AssetResult result = scanResults[i];
+                    result.isSelected = false;
+                    scanResults[i] = result;
+                }
+                selectedReferencePaths.Clear();
+            }
+
+            GUILayout.FlexibleSpace();
+
+            List<string> selectedPaths = GetSelectedAssetPaths();
+            EditorGUILayout.LabelField("已选: " + selectedPaths.Count, GUILayout.Width(58));
+
+            GUI.backgroundColor = Color.red;
+            string deleteButtonText = selectedPaths.Count > 0
+                ? "删除选中资源 (" + selectedPaths.Count + ")"
+                : "删除选中资源";
+            if (GUILayout.Button(deleteButtonText, GUILayout.Width(145), GUILayout.Height(22)))
+            {
+                DeleteSelected();
+            }
+            GUI.backgroundColor = Color.white;
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private void ScanAssets()
+        {
+            scanResults.Clear();
+            detailIndex = -1;
+            expandedReferenceNodes.Clear();
+            selectedReferencePaths.Clear();
+            nestedReferenceCache.Clear();
+            reverseLookupCache = null;
+
+            if (selectedTarget == null)
+            {
+                return;
+            }
+
+            try
+            {
+                string targetPath = AssetDatabase.GetAssetPath(selectedTarget);
+                string[] allGuids;
+
+                // 识别是文件夹还是单文件
+                if (Directory.Exists(targetPath))
+                {
+                    allGuids = AssetDatabase.FindAssets(
+                        "t:Texture2D t:Material t:Prefab t:Shader",
+                        new[] { targetPath });
+                }
+                else
+                {
+                    allGuids = new[] { AssetDatabase.AssetPathToGUID(targetPath) };
+                }
+
+                if (!isSearchingDependencies)
+                {
+                    EditorUtility.DisplayProgressBar("DV Clear", "正在全项目扫描引用关系...", 0.1f);
+                    reverseLookupCache = BuildReverseLookup();
+                }
+
+                for (int i = 0; i < allGuids.Length; i++)
+                {
+                    string guid = allGuids[i];
+                    string path = AssetDatabase.GUIDToAssetPath(guid);
+                    if (string.IsNullOrEmpty(path))
+                    {
+                        continue;
+                    }
+
+                    AssetResult result = new AssetResult
+                    {
+                        guid = guid,
+                        path = path,
+                        name = Path.GetFileName(path),
+                        type = AssetDatabase.GetMainAssetTypeAtPath(path),
+                        references = new List<string>()
+                    };
+
+                    if (isSearchingDependencies)
+                    {
+                        // 正向：我用了谁
+                        result.references = AssetDatabase.GetDependencies(path, false)
+                            .Where(dependency => dependency != path)
+                            .Distinct()
+                            .OrderBy(dependency => dependency)
+                            .ToList();
+                    }
+                    else
+                    {
+                        // 反向：谁用了我
+                        List<string> references;
+                        if (reverseLookupCache != null &&
+                            reverseLookupCache.TryGetValue(guid, out references))
+                        {
+                            result.references = new List<string>(references);
+                        }
+                    }
+
+                    result.refCount = result.references.Count;
+                    scanResults.Add(result);
+                }
+            }
+            finally
+            {
+                EditorUtility.ClearProgressBar();
+            }
+        }
+
+        private Dictionary<string, List<string>> BuildReverseLookup()
+        {
+            Dictionary<string, List<string>> lookup = new Dictionary<string, List<string>>();
+
+            // 扫描可能会引用到资源的类型
+            string[] checkGuids = AssetDatabase.FindAssets("t:Prefab t:Material t:Scene t:Controller");
+
+            for (int i = 0; i < checkGuids.Length; i++)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(checkGuids[i]);
+                float progress = checkGuids.Length > 0 ? (float)i / checkGuids.Length : 1f;
+                EditorUtility.DisplayProgressBar("扫描中", path, progress);
+
+                string[] dependencies = AssetDatabase.GetDependencies(path, false);
+                foreach (string dependency in dependencies)
+                {
+                    if (dependency == path)
+                    {
+                        continue;
+                    }
+
+                    string dependencyGuid = AssetDatabase.AssetPathToGUID(dependency);
+                    if (string.IsNullOrEmpty(dependencyGuid))
+                    {
+                        continue;
+                    }
+
+                    List<string> referencePaths;
+                    if (!lookup.TryGetValue(dependencyGuid, out referencePaths))
+                    {
+                        referencePaths = new List<string>();
+                        lookup[dependencyGuid] = referencePaths;
+                    }
+
+                    if (!referencePaths.Contains(path))
+                    {
+                        referencePaths.Add(path);
+                    }
+                }
+            }
+
+            foreach (List<string> references in lookup.Values)
+            {
+                references.Sort();
+            }
+
+            return lookup;
+        }
+
+        private void DeleteSelected()
+        {
+            List<string> pathsToDelete = GetSelectedAssetPaths();
+            if (pathsToDelete.Count == 0)
+            {
+                return;
+            }
+
+            const int maxPreviewCount = 12;
+            List<string> previewPaths = pathsToDelete.Take(maxPreviewCount).ToList();
+            string preview = string.Join("\n", previewPaths.ToArray());
+            if (pathsToDelete.Count > maxPreviewCount)
+            {
+                preview += "\n……以及另外 " + (pathsToDelete.Count - maxPreviewCount) + " 个资源";
+            }
+
+            string message = string.Format(
+                "确定要从项目中永久删除这 {0} 个资源吗？\n\n{1}\n\n该操作不可撤销，请确认路径无误。",
+                pathsToDelete.Count,
+                preview);
+            if (EditorUtility.DisplayDialog("确认删除", message, "确定", "取消"))
+            {
+                List<string> failedPaths = new List<string>();
+                foreach (string path in pathsToDelete)
+                {
+                    if (!AssetDatabase.DeleteAsset(path))
+                    {
+                        failedPaths.Add(path);
+                    }
+                }
+
+                AssetDatabase.Refresh();
+                ScanAssets();
+
+                if (failedPaths.Count > 0)
+                {
+                    EditorUtility.DisplayDialog(
+                        "部分资源删除失败",
+                        "以下资源未能删除：\n\n" + string.Join("\n", failedPaths.ToArray()),
+                        "知道了");
+                }
+            }
+        }
+    }
+}

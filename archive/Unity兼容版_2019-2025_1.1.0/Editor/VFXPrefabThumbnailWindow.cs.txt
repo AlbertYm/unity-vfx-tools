@@ -1,0 +1,297 @@
+#if UNITY_EDITOR
+using System;
+using System.IO;
+using UnityEditor;
+using UnityEngine;
+
+namespace EffectTools.PrefabThumbnails
+{
+    public sealed class VFXPrefabThumbnailWindow : EditorWindow
+    {
+        [SerializeField] GameObject prefab;
+        [SerializeField] AnimationClip clip;
+        [SerializeField] ThumbnailSettings settings = new ThumbnailSettings();
+        [SerializeField] bool followSelection = true;
+        VFXThumbnailPreview preview;
+        bool playing, pendingSave, dirty;
+        double lastTick;
+        Vector2 scroll;
+        string message = "选择 Project 中的特效 Prefab，挑好画面后保存。";
+        MessageType messageType = MessageType.Info;
+        int cameraControl;
+
+        [MenuItem("Effect Tools/Prefab Thumbnail/设置特效缩略图")]
+        public static void Open()
+        {
+            var window = GetWindow<VFXPrefabThumbnailWindow>("特效缩略图");
+            window.minSize = new Vector2(460, 660);
+            if (VFXThumbnailStore.IsPrefab(Selection.activeObject)) window.Select((GameObject)Selection.activeObject);
+            window.Show();
+        }
+
+        [MenuItem("Assets/Effect Tools/设置特效缩略图", false, 2050)]
+        static void OpenSelected() { Open(); }
+        [MenuItem("Assets/Effect Tools/设置特效缩略图", true)]
+        static bool CanOpenSelected() { return VFXThumbnailStore.IsPrefab(Selection.activeObject); }
+
+        [MenuItem("Effect Tools/Prefab Thumbnail/刷新缩略图显示")]
+        static void ReloadIcons() { VFXThumbnailStore.ReloadIndex(); }
+        [MenuItem("Effect Tools/Prefab Thumbnail/打开缩略图数据目录")]
+        static void RevealData()
+        {
+            Directory.CreateDirectory(VFXThumbnailStore.Folder);
+            EditorUtility.RevealInFinder(VFXThumbnailStore.Folder);
+        }
+
+        void OnEnable()
+        {
+            EditorApplication.update += Tick;
+            EditorApplication.playModeStateChanged += PlayModeChanged;
+            lastTick = EditorApplication.timeSinceStartup;
+            if (prefab != null) EditorApplication.delayCall += Rebuild;
+        }
+
+        void OnDisable()
+        {
+            EditorApplication.update -= Tick;
+            EditorApplication.playModeStateChanged -= PlayModeChanged;
+            EditorApplication.delayCall -= Rebuild;
+            Cleanup();
+        }
+
+        void Cleanup() { playing = false; if (preview != null) { preview.Dispose(); preview = null; } }
+
+        void PlayModeChanged(PlayModeStateChange state)
+        {
+            Cleanup();
+            if (state == PlayModeStateChange.EnteredEditMode) Rebuild();
+            Repaint();
+        }
+
+        void OnSelectionChange()
+        {
+            if (followSelection && VFXThumbnailStore.IsPrefab(Selection.activeObject) && Selection.activeObject != prefab)
+                Select((GameObject)Selection.activeObject);
+        }
+
+        void Select(GameObject asset)
+        {
+            Cleanup(); prefab = asset; clip = null; dirty = false;
+            var saved = VFXThumbnailStore.LoadSettings(VFXThumbnailStore.GuidFor(asset));
+            settings = saved ?? new ThumbnailSettings();
+            if (!string.IsNullOrEmpty(settings.clipGuid))
+            {
+                foreach (var candidate in AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GUIDToAssetPath(settings.clipGuid)))
+                {
+                    string guid; long localId;
+                    if (candidate is AnimationClip && AssetDatabase.TryGetGUIDAndLocalFileIdentifier(candidate, out guid, out localId) && localId == settings.clipLocalId)
+                    { clip = (AnimationClip)candidate; break; }
+                }
+            }
+            Rebuild();
+            if (saved == null && preview != null) preview.Fit(settings);
+            if (saved != null && saved.dependencyHash != AssetDatabase.GetAssetDependencyHash(AssetDatabase.GetAssetPath(prefab)).ToString())
+                SetMessage("此 Prefab 或依赖已变化，当前缩略图可能过期，请重新挑帧保存。", MessageType.Warning);
+            Repaint();
+        }
+
+        void Rebuild()
+        {
+            if (this == null) return;
+            Cleanup();
+            if (prefab == null || !VFXThumbnailStore.IsPrefab(prefab) || EditorApplication.isPlayingOrWillChangePlaymode) return;
+            try
+            {
+                preview = new VFXThumbnailPreview(prefab);
+                Sample();
+                SetMessage("预览已载入。Project 中显示的是最后保存的画面。", MessageType.Info);
+            }
+            catch (Exception error) { Cleanup(); SetMessage("预览失败：" + error.Message + "。可使用“指定 PNG”设置缩略图。", MessageType.Error); }
+            Repaint();
+        }
+
+        void SetMessage(string text, MessageType type) { message = text; messageType = type; }
+
+        void Sample()
+        {
+            if (preview == null) return;
+            settings.seconds = Mathf.Clamp(settings.seconds, 0f, settings.duration);
+            try { preview.Simulate(settings.seconds, settings.seed, clip); }
+            catch (Exception error) { playing = false; SetMessage("取帧失败：" + error.Message, MessageType.Error); }
+        }
+
+        void Tick()
+        {
+            double now = EditorApplication.timeSinceStartup;
+            if (playing && preview != null && now - lastTick >= 1.0 / 30.0)
+            {
+                settings.seconds += Mathf.Min(.1f, (float)(now - lastTick));
+                if (settings.seconds > settings.duration) settings.seconds = 0f;
+                lastTick = now; dirty = true; Sample(); Repaint();
+            }
+            else if (!playing) lastTick = now;
+        }
+
+        void OnGUI()
+        {
+            scroll = EditorGUILayout.BeginScrollView(scroll);
+            EditorGUILayout.LabelField("特效 Prefab · 选帧缩略图", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Project 原位置显示 · " + VFXThumbnailStore.Version, EditorStyles.miniLabel);
+            EditorGUI.BeginChangeCheck();
+            var chosen = (GameObject)EditorGUILayout.ObjectField("目标 Prefab", prefab, typeof(GameObject), false);
+            if (EditorGUI.EndChangeCheck())
+            {
+                if (chosen == null) { Cleanup(); prefab = null; }
+                else if (VFXThumbnailStore.IsPrefab(chosen)) Select(chosen);
+                else SetMessage("请选择 Project 中的 .prefab 文件，模型文件和场景实例不适用。", MessageType.Warning);
+            }
+            followSelection = EditorGUILayout.ToggleLeft("跟随 Project 选择（切换前请保存当前画面）", followSelection);
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                EditorGUILayout.HelpBox("请退出 Play 模式后设置缩略图。", MessageType.Info);
+
+            float side = Mathf.Clamp(position.width - 40f, 220f, 480f);
+            Rect available = GUILayoutUtility.GetRect(side, side, GUILayout.ExpandWidth(true));
+            Rect square = new Rect(available.center.x - side * .5f, available.y, side, side);
+            cameraControl = GUIUtility.GetControlID(FocusType.Passive);
+            HandleCamera(square);
+            if (Event.current.type == EventType.Repaint)
+            {
+                EditorGUI.DrawRect(square, settings.background);
+                if (preview != null)
+                {
+                    try { GUI.DrawTexture(square, preview.Render(new Rect(0, 0, side, side), settings), ScaleMode.StretchToFill, false); }
+                    catch (Exception error) { playing = false; SetMessage("绘制失败：" + error.Message, MessageType.Error); }
+                }
+                else GUI.Label(square, "选择一个特效 Prefab", new GUIStyle(EditorStyles.centeredGreyMiniLabel) { alignment = TextAnchor.MiddleCenter });
+            }
+            EditorGUILayout.LabelField("左键旋转 · 右键平移 · 滚轮缩放 · 方形区域即缩略图构图", EditorStyles.centeredGreyMiniLabel);
+
+            using (new EditorGUI.DisabledScope(preview == null))
+            {
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button(playing ? "暂停" : "播放")) { playing = !playing; lastTick = EditorApplication.timeSinceStartup; }
+                if (GUILayout.Button("上一帧")) Step(-1);
+                if (GUILayout.Button("下一帧")) Step(1);
+                if (GUILayout.Button("适配画面")) { preview.Fit(settings); dirty = true; }
+                if (GUILayout.Button("正面")) { settings.orbit = Vector2.zero; dirty = true; }
+                EditorGUILayout.EndHorizontal();
+                EditorGUI.BeginChangeCheck();
+                settings.seconds = EditorGUILayout.Slider("预览时间（秒）", settings.seconds, 0f, settings.duration);
+                EditorGUILayout.BeginHorizontal();
+                int frame = EditorGUILayout.IntField("采样帧", Mathf.RoundToInt(settings.seconds * settings.fps));
+                int fps = EditorGUILayout.IntPopup(settings.fps, new[] { "24 FPS", "30 FPS", "60 FPS" }, new[] { 24, 30, 60 }, GUILayout.Width(90));
+                if (fps != settings.fps) settings.fps = fps;
+                else if (frame != Mathf.RoundToInt(settings.seconds * settings.fps)) settings.seconds = frame / (float)settings.fps;
+                EditorGUILayout.EndHorizontal();
+                settings.duration = Mathf.Clamp(EditorGUILayout.FloatField("预览范围（秒）", settings.duration), .1f, 30f);
+                settings.seed = Mathf.Max(1, EditorGUILayout.IntField("固定随机种子", settings.seed));
+                clip = (AnimationClip)EditorGUILayout.ObjectField("动画片段（可选）", clip, typeof(AnimationClip), false);
+                if (EditorGUI.EndChangeCheck()) { playing = false; dirty = true; Sample(); }
+                EditorGUI.BeginChangeCheck();
+                settings.background = EditorGUILayout.ColorField("缩略图背景", settings.background);
+                settings.orthographic = EditorGUILayout.Toggle("正交视角", settings.orthographic);
+                if (EditorGUI.EndChangeCheck()) dirty = true;
+                if (preview != null)
+                {
+                    EditorGUILayout.LabelField("粒子系统 " + preview.ParticleSystems + "  ·  当前粒子 " + preview.ParticleCount + (dirty ? "  ·  未保存" : ""), EditorStyles.miniLabel);
+                    if (preview.IgnoredScripts > 0 || preview.UnsupportedVisuals > 0)
+                        EditorGUILayout.HelpBox("预览跳过 " + preview.IgnoredScripts + " 个脚本/缺失组件、" + preview.UnsupportedVisuals + " 个特殊显示组件。依赖脚本触发、UI 或 VFX Graph 的部分可能不可见。", MessageType.Warning);
+                }
+            }
+
+            GUILayout.Space(6);
+            using (new EditorGUI.DisabledScope(prefab == null || EditorApplication.isPlayingOrWillChangePlaymode))
+            {
+                EditorGUILayout.BeginHorizontal();
+                using (new EditorGUI.DisabledScope(preview == null))
+                    if (GUILayout.Button("保存当前帧为缩略图", GUILayout.Height(32))) { playing = false; pendingSave = true; Repaint(); }
+                if (GUILayout.Button("指定 PNG…", GUILayout.Height(32), GUILayout.Width(105))) ImportPNG();
+                EditorGUILayout.EndHorizontal();
+                using (new EditorGUI.DisabledScope(!VFXThumbnailStore.Has(VFXThumbnailStore.GuidFor(prefab))))
+                    if (GUILayout.Button("恢复 Unity 默认图标（保留备份）"))
+                    {
+                        VFXThumbnailStore.RestoreDefault(VFXThumbnailStore.GuidFor(prefab));
+                        SetMessage("已恢复默认图标，旧缩略图保留在数据目录的 Backups 中。", MessageType.Info);
+                    }
+            }
+            EditorGUILayout.HelpBox(message, messageType);
+            EditorGUILayout.LabelField("仅改变本机 Project 图标显示，不改写 Prefab 或材质；文件名和拖拽方式不变。", EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.EndScrollView();
+
+            if (pendingSave && Event.current.type == EventType.Repaint)
+            {
+                pendingSave = false;
+                try { Sample(); Save(preview.Capture(settings)); }
+                catch (Exception error) { SetMessage("保存失败：" + error.Message, MessageType.Error); }
+                Repaint();
+            }
+        }
+
+        void Step(int direction)
+        {
+            playing = false; settings.seconds = (Mathf.RoundToInt(settings.seconds * settings.fps) + direction) / (float)settings.fps;
+            dirty = true; Sample(); Repaint();
+        }
+
+        void HandleCamera(Rect rect)
+        {
+            var e = Event.current;
+            if (preview == null) return;
+            if (rect.Contains(e.mousePosition) && e.type == EventType.MouseDown && (e.button == 0 || e.button == 1))
+            { GUIUtility.hotControl = cameraControl; e.Use(); }
+            if (e.type == EventType.MouseDrag && GUIUtility.hotControl == cameraControl)
+            {
+                if (e.button == 0)
+                {
+                    settings.orbit.x += e.delta.x * .5f;
+                    settings.orbit.y = Mathf.Clamp(settings.orbit.y - e.delta.y * .5f, -89f, 89f);
+                }
+                else
+                {
+                    Quaternion rotation = Quaternion.Euler(settings.orbit.y, settings.orbit.x, 0f);
+                    settings.center += rotation * new Vector3(-e.delta.x, e.delta.y, 0f) * settings.distance * .0018f;
+                }
+                dirty = true; e.Use(); Repaint();
+            }
+            if (e.type == EventType.MouseUp && GUIUtility.hotControl == cameraControl) { GUIUtility.hotControl = 0; e.Use(); }
+            if (rect.Contains(e.mousePosition) && e.type == EventType.ScrollWheel)
+            {
+                settings.distance = Mathf.Clamp(settings.distance * Mathf.Exp(e.delta.y * .06f), .01f, 100000f);
+                dirty = true; e.Use(); Repaint();
+            }
+        }
+
+        void Save(byte[] png)
+        {
+            if (prefab == null) return;
+            settings.clipGuid = ""; settings.clipLocalId = 0;
+            if (clip != null)
+            {
+                string guid; long id;
+                if (AssetDatabase.TryGetGUIDAndLocalFileIdentifier(clip, out guid, out id)) { settings.clipGuid = guid; settings.clipLocalId = id; }
+            }
+            settings.dependencyHash = AssetDatabase.GetAssetDependencyHash(AssetDatabase.GetAssetPath(prefab)).ToString();
+            VFXThumbnailStore.Save(VFXThumbnailStore.GuidFor(prefab), png, settings);
+            dirty = false; SetMessage("已保存！回到 Project 的大图标视图，即可看到此 Prefab 的新缩略图。", MessageType.Info);
+        }
+
+        void ImportPNG()
+        {
+            string path = EditorUtility.OpenFilePanel("选择缩略图 PNG（建议方形，最大 2048×2048）", "", "png");
+            if (string.IsNullOrEmpty(path)) return;
+            Texture2D image = null;
+            try
+            {
+                if (new FileInfo(path).Length > 16 * 1024 * 1024) throw new InvalidOperationException("PNG 超过 16 MB，请先缩小。");
+                byte[] bytes = File.ReadAllBytes(path);
+                image = new Texture2D(2, 2);
+                if (!image.LoadImage(bytes)) throw new InvalidOperationException("图片无法解码。");
+                if (image.width > 2048 || image.height > 2048) throw new InvalidOperationException("图片边长请控制在 2048 像素以内。");
+                Save(bytes);
+            }
+            catch (Exception error) { SetMessage("导入失败：" + error.Message, MessageType.Error); }
+            finally { if (image != null) DestroyImmediate(image); }
+        }
+    }
+}
+#endif
