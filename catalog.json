@@ -135,5 +135,28 @@
         "sha256": "10cc54a4e12de294e2c2005361d647518e20c7ac68e7613e87ddf28cc46dda8f"
       }
     ]
+  },
+  {
+    "id": "previews/timeline-int-event-preview",
+    "name": "Timeline 多轨道 Int 动画事件预览",
+    "version": "1.0.0",
+    "status": "maintained",
+    "files": [
+      {
+        "path": "tools/previews/timeline-int-event-preview/Editor/TimelineFacePreviewConfig.cs",
+        "source": "public-adaptation-2026-10-13",
+        "sha256": "dcca7e6caf994b3d2b6bab85b050fc3cc629641c92890366d603d31762151c81"
+      },
+      {
+        "path": "tools/previews/timeline-int-event-preview/Editor/TimelineIntEventPreview.cs",
+        "source": "public-adaptation-2026-10-13",
+        "sha256": "385916dd81d4c1263ecb9bcf5c4c044d21822bc4b8e5530f7a73a29fc7849035"
+      },
+      {
+        "path": "tools/previews/timeline-int-event-preview/Editor/TimelineIntEventPreview.Editor.asmdef",
+        "source": "public-adaptation-2026-10-13",
+        "sha256": "14597f3abf7045a8f01fc4e0d321a05f643740009efb850cdee476799315087d"
+      }
+    ]
   }
 ]
