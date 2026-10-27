@@ -1,5 +1,11 @@
 # 更新记录
 
+## 1.0.1 — 2026-10-27
+
+- 菜单迁移至 Effect Tools → Timeline → Int Event Preview。
+- 对比项目适配版本后，仅合入菜单路径变化；保留 TimelineFacePreviewConfig、Mesh / Renderer 匹配、可配置贴图属性与关键词，不引入项目资源路径和组件依赖。
+- Unity 2022.3.62f3 程序集独立编译通过；本次未执行公开配置模式的 Unity 界面验收，历史验收边界不变。
+
 ## 1.0.0 — 2026-10-13
 
 - 首次公开收录多轨道 Timeline Int 动画事件预览工具。

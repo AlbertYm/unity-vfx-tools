@@ -41,7 +41,7 @@ public sealed class TimelineIntEventPreview : EditorWindow
     private readonly Dictionary<AnimationClip, AnimationEvent[]> events =
         new Dictionary<AnimationClip, AnimationEvent[]>();
 
-    [MenuItem("Tools/Timeline/Int Event Preview")]
+    [MenuItem("Effect Tools/Timeline/Int Event Preview")]
     private static void Open() { GetWindow<TimelineIntEventPreview>("事件预览"); }
 
     private void OnEnable()

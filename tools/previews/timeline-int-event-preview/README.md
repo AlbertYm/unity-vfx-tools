@@ -1,6 +1,6 @@
 # Timeline 多轨道 Int 动画事件预览
 
-版本：1.0.0。分类目录：`previews/timeline-int-event-preview`。
+版本：1.0.1。分类目录：`previews/timeline-int-event-preview`。
 
 ## 功能与使用场景
 
@@ -14,7 +14,7 @@
 
 ## 入口与基本操作
 
-打开 **Tools → Timeline → Int Event Preview**。
+打开 **Effect Tools → Timeline → Int Event Preview**。
 
 1. 打开场景中的 Timeline 实例，点击“使用当前 Timeline 的 Director”。
 2. 在 Timeline 单击需要预览的动画片段，点击“使用 Timeline 当前选中的动画片段”。轨道列表显示静音状态和片段名，避免选中静音分组里的同名轨道。
