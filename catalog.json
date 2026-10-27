@@ -171,5 +171,18 @@
         "sha256": "22d4fa0895d6a3adf52f88ec68dbaaa14950b5db0e3f752c40b49427cf912ed3"
       }
     ]
+  },
+  {
+    "id": "particles/creation-defaults",
+    "name": "新建粒子默认关闭 Play On Awake",
+    "version": "1.0.0",
+    "status": "maintained",
+    "files": [
+      {
+        "path": "tools/particles/creation-defaults/Editor/ParticleSystemCreationDefaults.cs",
+        "source": "editor-tools-2026-10-27",
+        "sha256": "93918b7aad9c2f9d9e306393cfea07ac9cdcd381ead327844662f747887776bb"
+      }
+    ]
   }
 ]
