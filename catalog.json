@@ -139,7 +139,7 @@
   {
     "id": "previews/timeline-int-event-preview",
     "name": "Timeline 多轨道 Int 动画事件预览",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "status": "maintained",
     "files": [
       {
@@ -150,7 +150,7 @@
       {
         "path": "tools/previews/timeline-int-event-preview/Editor/TimelineIntEventPreview.cs",
         "source": "public-adaptation-2026-10-13",
-        "sha256": "7aeb02038a71d82da410eb4e78dc19043fd1c956a558a09df71d6fcbb72e5282"
+        "sha256": "798cc16566527f09aed3c417fdb77633ab481851fa3746a886cd55f4505c9007"
       },
       {
         "path": "tools/previews/timeline-int-event-preview/Editor/TimelineIntEventPreview.Editor.asmdef",

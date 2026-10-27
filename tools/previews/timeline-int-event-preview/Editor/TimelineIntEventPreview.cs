@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.IO;
 using UnityEditor;
 using UnityEditor.Timeline;
 using UnityEditor.SceneManagement;
@@ -38,6 +39,30 @@ public sealed class TimelineIntEventPreview : EditorWindow
     [SerializeField] private bool expanded = true;
     [SerializeField] private List<TimelineIntEventPreview> entries = new List<TimelineIntEventPreview>();
     private Vector2 scroll;
+    [SerializeField] private string directorId, trackId, receiverId, configId;
+    private bool persistenceReady;
+    private double nextPersistenceTick;
+    private string lastSavedJson;
+    private string persistenceMessage;
+    private bool persistenceWritable = true;
+    [Serializable]
+    private sealed class SavedEntry
+    {
+        public string directorId, trackId, receiverId, configId;
+        public string functionName;
+        public int resetId;
+        public bool expanded;
+    }
+    [Serializable]
+    private sealed class SavedConfiguration
+    {
+        public int version = 1;
+        public List<SavedEntry> items = new List<SavedEntry>();
+    }
+    private static string ConfigurationPath
+    {
+        get { return Path.GetFullPath(Path.Combine(Application.dataPath, "../UserSettings/TimelineIntEventPreview.json")); }
+    }
     private readonly Dictionary<AnimationClip, AnimationEvent[]> events =
         new Dictionary<AnimationClip, AnimationEvent[]>();
 
@@ -50,9 +75,13 @@ public sealed class TimelineIntEventPreview : EditorWindow
         EditorApplication.playModeStateChanged += OnPlayMode;
         AssemblyReloadEvents.beforeAssemblyReload += Stop;
         EditorSceneManager.sceneSaving += OnSceneSaving;
+        EditorSceneManager.sceneClosing += OnSceneClosing;
+        EditorApplication.update += PersistenceTick;
+        EditorApplication.delayCall += InitializePersistence;
     }
     private void OnDisable()
     {
+        if (!embedded && persistenceReady) SaveConfiguration();
         Stop();
         if (!embedded)
             foreach (var entry in entries) if (entry) entry.Stop();
@@ -61,9 +90,17 @@ public sealed class TimelineIntEventPreview : EditorWindow
         EditorApplication.playModeStateChanged -= OnPlayMode;
         AssemblyReloadEvents.beforeAssemblyReload -= Stop;
         EditorSceneManager.sceneSaving -= OnSceneSaving;
+        EditorSceneManager.sceneClosing -= OnSceneClosing;
+        EditorApplication.update -= PersistenceTick;
+        EditorApplication.delayCall -= InitializePersistence;
     }
     private void OnPlayMode(PlayModeStateChange state) { Stop(); }
     private void OnSceneSaving(UnityEngine.SceneManagement.Scene scene, string path) { Stop(); }
+    private void OnSceneClosing(UnityEngine.SceneManagement.Scene scene, bool removingScene)
+    {
+        if (!embedded && persistenceReady) SaveConfiguration();
+        Stop();
+    }
 
     private void OnDestroy()
     {
@@ -75,6 +112,7 @@ public sealed class TimelineIntEventPreview : EditorWindow
     private void OnGUI()
     {
         if (embedded) { DrawSingle(); return; }
+        if (!persistenceReady) { EditorGUILayout.LabelField("正在恢复上次轨道配置……"); return; }
         entries.RemoveAll(entry => !entry);
         int active = running ? 1 : 0;
         foreach (var entry in entries) if (entry.running) active++;
@@ -100,6 +138,20 @@ public sealed class TimelineIntEventPreview : EditorWindow
             entry.functionName = functionName;
             entries.Add(entry);
         }
+        if (GUILayout.Button("清空全部保存配置…") && EditorUtility.DisplayDialog("清空预览配置", "清空本工具保存的全部轨道配置？不会删除场景、动画或表情 Prefab。", "清空", "取消"))
+        {
+            Stop();
+            foreach (var entry in entries) if (entry) { entry.Stop(); DestroyImmediate(entry); }
+            entries.Clear();
+            director = null; track = null; receiver = null; faceConfig = null;
+            directorId = trackId = receiverId = configId = "";
+            functionName = "OnChangeFace"; resetId = 0; expanded = true;
+            persistenceWritable = true;
+            SaveConfiguration();
+        }
+        EditorGUILayout.HelpBox(string.IsNullOrEmpty(persistenceMessage)
+            ? "配置自动保存在本机；切换场景后返回会重新绑定。恢复配置后请手动开启预览。"
+            : persistenceMessage, MessageType.None);
         EditorGUILayout.HelpBox("每个折叠项配置一条轨道。批量开启会跳过已运行项；失败项显示错误，不影响其他有效轨道。", MessageType.None);
         scroll = EditorGUILayout.BeginScrollView(scroll);
         DrawEntry(this, 1, false);
@@ -110,6 +162,7 @@ public sealed class TimelineIntEventPreview : EditorWindow
                 removed.Stop(); entries.RemoveAt(i); DestroyImmediate(removed); i--;
             }
         EditorGUILayout.EndScrollView();
+        SaveConfiguration();
     }
     private bool DrawEntry(TimelineIntEventPreview entry, int number, bool removable)
     {
@@ -133,11 +186,15 @@ public sealed class TimelineIntEventPreview : EditorWindow
         EditorGUILayout.HelpBox("读取已有 int 动画事件，在编辑模式拖动 Timeline 时应用最后一个有效编号。仅用于可重复调用的状态切换。", MessageType.Info);
         using (new EditorGUI.DisabledScope(running))
         {
-            director = (PlayableDirector)EditorGUILayout.ObjectField("Timeline Director", director, typeof(PlayableDirector), true);
+            EditorGUI.BeginChangeCheck();
+            var newDirector = (PlayableDirector)EditorGUILayout.ObjectField("Timeline Director", director, typeof(PlayableDirector), true);
+            if (EditorGUI.EndChangeCheck())
+            { director = newDirector; directorId = ObjectId(director); track = null; receiver = null; faceConfig = null; trackId = receiverId = configId = ""; }
             if (GUILayout.Button("使用当前 Timeline 的 Director"))
             {
                 director = TimelineEditor.inspectedDirector;
                 track = null; receiver = null; faceConfig = null;
+                directorId = ObjectId(director); trackId = receiverId = configId = "";
                 status = director ? "已取得 Director，请选择角色轨道。" : "请先在 Timeline 中打开场景里的 Timeline 实例。";
             }
             DrawTracks();
@@ -152,14 +209,19 @@ public sealed class TimelineIntEventPreview : EditorWindow
                     track = selectedTrack;
                     receiver = null;
                     faceConfig = null;
+                    directorId = ObjectId(director); trackId = ObjectId(track); receiverId = configId = "";
                     status = "已选择片段：" + selected.displayName + "。请自动查找表情配置后开始预览。";
                 }
                 else status = "请先在 Timeline 中单击 角色动画片段 这样的动画片段矩形，再点击此按钮。";
             }
             functionName = EditorGUILayout.TextField("事件函数", functionName);
-            receiver = (MonoBehaviour)EditorGUILayout.ObjectField("接收组件", receiver, typeof(MonoBehaviour), true);
+            EditorGUI.BeginChangeCheck();
+            var newReceiver = (MonoBehaviour)EditorGUILayout.ObjectField("接收组件", receiver, typeof(MonoBehaviour), true);
+            if (EditorGUI.EndChangeCheck()) { receiver = newReceiver; receiverId = ObjectId(receiver); }
             if (GUILayout.Button("从轨道绑定角色查找接收组件")) FindReceiver();
-            faceConfig = (TimelineFacePreviewConfig)EditorGUILayout.ObjectField("表情配置资产", faceConfig, typeof(TimelineFacePreviewConfig), false);
+            EditorGUI.BeginChangeCheck();
+            var newConfig = (TimelineFacePreviewConfig)EditorGUILayout.ObjectField("表情配置资产", faceConfig, typeof(TimelineFacePreviewConfig), false);
+            if (EditorGUI.EndChangeCheck()) { faceConfig = newConfig; configId = ObjectId(faceConfig); }
             if (GUILayout.Button("无接收组件：自动查找表情配置")) FindFaceConfig();
             resetId = EditorGUILayout.IntField("初始 / 停止恢复编号", resetId);
         }
@@ -174,6 +236,8 @@ public sealed class TimelineIntEventPreview : EditorWindow
         EditorGUILayout.Space();
         EditorGUILayout.LabelField(running ? "状态：预览已开启" : "状态：预览未开启", EditorStyles.boldLabel);
         EditorGUILayout.HelpBox(status, MessageType.None);
+        if (!director && !string.IsNullOrEmpty(directorId))
+            EditorGUILayout.HelpBox("已保留场景对象引用，等待原场景重新打开。不会改选其他角色或清空此配置。", MessageType.Info);
         EditorGUILayout.LabelField("关闭窗口或保存场景会停止预览；无组件模式恢复原材质。", EditorStyles.wordWrappedLabel);
     }
 
@@ -187,7 +251,114 @@ public sealed class TimelineIntEventPreview : EditorWindow
         if (tracks.Count == 0) { EditorGUILayout.LabelField("没有 Animation Track。"); return; }
         int oldIndex = tracks.IndexOf(track);
         int index = EditorGUILayout.Popup("角色动画轨道", oldIndex < 0 ? 0 : oldIndex, labels.ToArray());
-        if (oldIndex != index) { track = tracks[index]; receiver = null; faceConfig = null; }
+        if (oldIndex < 0 && !string.IsNullOrEmpty(trackId))
+        {
+            EditorGUILayout.HelpBox("保存的轨道暂不可用。要更换轨道，请用“使用 Timeline 当前选中的动画片段”。", MessageType.Info);
+            return;
+        }
+        if (oldIndex != index) { track = tracks[index]; trackId = ObjectId(track); receiver = null; faceConfig = null; receiverId = configId = ""; }
+    }
+    private static string ObjectId(UnityEngine.Object value)
+    {
+        if (!value) return "";
+        var component = value as Component;
+        if (component && string.IsNullOrEmpty(component.gameObject.scene.path)) return "";
+        var id = GlobalObjectId.GetGlobalObjectIdSlow(value);
+        return id.identifierType == 0 ? "" : id.ToString();
+    }
+    private static T ResolveId<T>(string value) where T : UnityEngine.Object
+    {
+        GlobalObjectId id;
+        if (string.IsNullOrEmpty(value) || !GlobalObjectId.TryParse(value, out id)) return null;
+        return GlobalObjectId.GlobalObjectIdentifierToObjectSlow(id) as T;
+    }
+    private void ResolveReferences()
+    {
+        if (!director) director = ResolveId<PlayableDirector>(directorId);
+        if (!track) track = ResolveId<AnimationTrack>(trackId);
+        if (!receiver) receiver = ResolveId<MonoBehaviour>(receiverId);
+        if (!faceConfig) faceConfig = ResolveId<TimelineFacePreviewConfig>(configId);
+    }
+    private SavedEntry CaptureConfiguration()
+    {
+        // 未加载场景中的 Unity 对象会变为 null，但持久 ID 必须保留。
+        if (director) { var id = ObjectId(director); if (!string.IsNullOrEmpty(id)) directorId = id; }
+        if (track) trackId = ObjectId(track);
+        if (receiver) { var id = ObjectId(receiver); if (!string.IsNullOrEmpty(id)) receiverId = id; }
+        if (faceConfig) configId = ObjectId(faceConfig);
+        return new SavedEntry { directorId = directorId, trackId = trackId, receiverId = receiverId,
+            configId = configId, functionName = functionName, resetId = resetId, expanded = expanded };
+    }
+    private void ApplyConfiguration(SavedEntry saved)
+    {
+        director = null; track = null; receiver = null; faceConfig = null;
+        directorId = saved.directorId; trackId = saved.trackId; receiverId = saved.receiverId; configId = saved.configId;
+        functionName = saved.functionName ?? "OnChangeFace"; resetId = saved.resetId; expanded = saved.expanded;
+        running = false;
+        ResolveReferences();
+        status = "已恢复保存的配置；请手动开启预览。";
+    }
+    private void InitializePersistence()
+    {
+        if (embedded || persistenceReady) return;
+        try
+        {
+            if (File.Exists(ConfigurationPath))
+            {
+                var json = File.ReadAllText(ConfigurationPath, System.Text.Encoding.UTF8);
+                var saved = JsonUtility.FromJson<SavedConfiguration>(json);
+                if (saved == null || saved.version != 1 || saved.items == null || saved.items.Count == 0)
+                    throw new InvalidOperationException("保存配置的格式无效或版本不支持。");
+                foreach (var item in saved.items) if (item == null) throw new InvalidOperationException("保存配置包含空条目。");
+                foreach (var entry in entries) if (entry) { entry.Stop(); DestroyImmediate(entry); }
+                entries.Clear();
+                ApplyConfiguration(saved.items[0]);
+                for (int i = 1; i < saved.items.Count; i++)
+                {
+                    var entry = CreateInstance<TimelineIntEventPreview>();
+                    entry.embedded = true; entry.hideFlags = HideFlags.HideAndDontSave;
+                    entry.ApplyConfiguration(saved.items[i]); entries.Add(entry);
+                }
+            }
+            persistenceReady = true;
+            SaveConfiguration();
+        }
+        catch (Exception exception)
+        {
+            persistenceReady = true; persistenceWritable = false;
+            persistenceMessage = "配置读取失败，已保护原文件、不自动覆盖：" + exception.Message;
+        }
+        Repaint();
+    }
+    private void SaveConfiguration()
+    {
+        if (embedded || !persistenceReady || !persistenceWritable || EditorApplication.isPlayingOrWillChangePlaymode) return;
+        try
+        {
+            var saved = new SavedConfiguration();
+            saved.items.Add(CaptureConfiguration());
+            foreach (var entry in entries) if (entry) saved.items.Add(entry.CaptureConfiguration());
+            var json = JsonUtility.ToJson(saved, true);
+            if (json == lastSavedJson) return;
+            Directory.CreateDirectory(Path.GetDirectoryName(ConfigurationPath));
+            var temporary = ConfigurationPath + ".tmp";
+            File.WriteAllText(temporary, json, new System.Text.UTF8Encoding(false));
+            if (File.Exists(ConfigurationPath)) File.Replace(temporary, ConfigurationPath, ConfigurationPath + ".bak");
+            else File.Move(temporary, ConfigurationPath);
+            lastSavedJson = json;
+            persistenceMessage = director && string.IsNullOrEmpty(director.gameObject.scene.path)
+                ? "当前场景尚未保存，场景对象不能跨场景恢复。请先保存场景。" : null;
+        }
+        catch (Exception exception) { persistenceMessage = "配置保存失败：" + exception.Message; }
+    }
+    private void PersistenceTick()
+    {
+        if (embedded || !persistenceReady || EditorApplication.timeSinceStartup < nextPersistenceTick ||
+            EditorApplication.isPlayingOrWillChangePlaymode) return;
+        nextPersistenceTick = EditorApplication.timeSinceStartup + 0.75;
+        ResolveReferences();
+        foreach (var entry in entries) if (entry) entry.ResolveReferences();
+        SaveConfiguration();
     }
     private static void CollectTracks(TrackAsset item, string prefix, List<AnimationTrack> tracks, List<string> labels)
     {

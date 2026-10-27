@@ -1,0 +1,22 @@
+{
+  "public_editor_compile": "passed_in_unity_test_project",
+  "privacy": "No project assets, internal paths, fixed role names or business component references included",
+  "version": "1.0.2",
+  "public_face_shader_visual_acceptance": "not_run",
+  "cross_editor_process_restart": "not_run",
+  "date": "2026-10-27",
+  "checks": [
+    "scene switch preserves configuration",
+    "scene return rebinds stable IDs",
+    "multiple entries preserved",
+    "generic configuration asset restored",
+    "function and reset ID preserved",
+    "foldout state preserved",
+    "window recreation restores configuration",
+    "preview remains stopped on restore"
+  ],
+  "unity": "2022.3.62f3",
+  "public_persistence_acceptance": "PERSISTENCE_ACCEPTANCE_PASS",
+  "timeline": "1.7.7",
+  "tool": "previews/timeline-int-event-preview"
+}
