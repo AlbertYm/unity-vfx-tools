@@ -158,5 +158,18 @@
         "sha256": "14597f3abf7045a8f01fc4e0d321a05f643740009efb850cdee476799315087d"
       }
     ]
+  },
+  {
+    "id": "particles/texture-rename",
+    "name": "粒子按贴图批量命名",
+    "version": "1.0.0",
+    "status": "maintained",
+    "files": [
+      {
+        "path": "tools/particles/texture-rename/Editor/ParticleTextureRenameWindow.cs",
+        "source": "editor-tools-2026-10-27",
+        "sha256": "22d4fa0895d6a3adf52f88ec68dbaaa14950b5db0e3f752c40b49427cf912ed3"
+      }
+    ]
   }
 ]
