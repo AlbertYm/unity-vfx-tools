@@ -1,6 +1,6 @@
 # Unity VFX Tools · Unity 常用特效脚本
 
-按用途整理的 Unity 特效工作工具集：**一个仓库，12 个独立工具，17 个当前 C# 文件**。中文说明，每个工具可单独安装、更新和查看历史。采用 [MIT 许可](LICENSE)。
+按用途整理的 Unity 特效工作工具集：**一个仓库，13 个独立工具，19 个当前 C# 文件（含 1 个 Windows 启动器源码）**。中文说明，每个工具可单独安装、更新和查看历史。采用 [MIT 许可](LICENSE)。
 
 ## 工具目录
 
@@ -9,6 +9,7 @@
 | asset-management | [资源依赖与清理](tools/asset-management/dv-clear/README.md) | 梳理特效资源依赖、查看谁引用了某个资源，辅助人工清理。 | 主版本 |
 | asset-management | [按贴图名称重命名材质](tools/asset-management/material-rename/README.md) | 统一特效材质命名，便于依据材质使用的贴图寻找对应资源。 | 主版本 |
 | asset-management | [资源引用搜索](tools/asset-management/reference-checker/README.md) | 查找哪些 Prefab、场景、材质或 .asset 文件包含目标资源 GUID，辅助迁移和排错。 | 主版本 |
+| asset-management | [P4 → Unity 资源定位](tools/asset-management/p4-unity-locator/README.md) | 从 P4V 双击材质或右键文件，定位到已打开 Unity 的对应资源。 | 1.0.0；原项目定位已验证，公开版完整入口待验收 |
 | textures | [特效贴图调整](tools/textures/texture-adjust/README.md) | 在 Unity 内旋转、去色和调整普通颜色贴图的明暗，生成新的 PNG 变体。 | 主版本 |
 | previews | [特效预制体选帧缩略图](tools/previews/prefab-thumbnail/README.md) | 为粒子特效 Prefab 选择有辨识度的缩略图，方便素材库浏览。 | 主版本 |
 | previews | [Timeline 多轨道 Int 动画事件预览](tools/previews/timeline-int-event-preview/README.md) | 在编辑模式拖动时间轴，同步预览多个角色的 int 状态事件与表情。 | 主版本（公开适配待实测） |

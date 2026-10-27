@@ -1,0 +1,6 @@
+{
+  "name": "UnityVfxTools.P4UnityLocator.Editor",
+  "includePlatforms": ["Editor"],
+  "references": [],
+  "autoReferenced": true
+}
