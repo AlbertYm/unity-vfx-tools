@@ -1,6 +1,6 @@
 # Unity VFX Tools · Unity 常用特效脚本
 
-按用途整理的 Unity 特效工作工具集：**一个仓库，10 个独立工具，15 个当前 C# 文件**。中文说明，每个工具可单独安装、更新和查看历史。采用 [MIT 许可](LICENSE)。
+按用途整理的 Unity 特效工作工具集：**一个仓库，12 个独立工具，17 个当前 C# 文件**。中文说明，每个工具可单独安装、更新和查看历史。采用 [MIT 许可](LICENSE)。
 
 ## 工具目录
 
@@ -17,6 +17,13 @@
 | runtime | [相机黑白背景切换](tools/runtime/screen-color/README.md) | 检查特效在深色和浅色背景下的边缘、透明度和可读性。 | 主版本 |
 | particles | [批量编辑粒子起始延迟（实验）](tools/particles/start-delay-editor/README.md) | 批量设置、增加或减少所选对象及活动子对象的 ParticleSystem.startDelay。 | 实验 |
 
+新增粒子工具：
+
+| 分类 | 工具 | 使用场景 | 状态 |
+|---|---|---|---|
+| particles | [粒子按贴图批量命名](tools/particles/texture-rename/README.md) | 窗口预览或右键直接按主贴图命名，支持多选和撤销。 | 1.0.0；原项目用户已实测 |
+| particles | [新建粒子默认关闭 Play On Awake](tools/particles/creation-defaults/README.md) | 添加粒子组件时自动关闭 Play On Awake。 | 1.0.0；编译已验证，行为待逐项验收 |
+
 ## 开始使用
 
 1. 下载本仓库 ZIP，或使用 Git 克隆仓库。
@@ -32,7 +39,7 @@
 
 ## 版本与兼容性
 
-Timeline 事件预览首次公开版本为 1.0.0，新增通用配置资产，公开改写部分尚未进行 Unity 界面验收；原项目适配版已由用户验收。DV Clear 已独立更新为 1.2.0，含配套引用索引；其他维护工具以现有 1.1.0 兼容包为来源；粒子起始延迟编辑器单独标记为实验工具 0.1.0。原包目标范围为 Unity 2019–Unity 6，但不等于全部版本实测通过。[验证说明](docs/VERIFICATION.md)区分本次检查与历史记录。
+Timeline 事件预览当前版本为 1.0.1，入口已迁移至 Effect Tools；首次公开版本为 1.0.0，新增通用配置资产，公开改写部分尚未进行 Unity 界面验收；原项目适配版已由用户验收。DV Clear 已独立更新为 1.2.0，含配套引用索引；其他维护工具以现有 1.1.0 兼容包为来源；粒子起始延迟编辑器单独标记为实验工具 0.1.0。原包目标范围为 Unity 2019–Unity 6，但不等于全部版本实测通过。[验证说明](docs/VERIFICATION.md)区分本次检查与历史记录。
 
 DV Clear 1.2.0 清理前重新核验、备份并移入系统回收站，扫描为 0 仍不代表可安全删除；粒子编辑器没有完整输入校验和 Undo。使用前阅读对应限制。
 
