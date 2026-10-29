@@ -1,6 +1,6 @@
 # Unity VFX Tools · Unity 常用特效脚本
 
-按用途整理的 Unity 特效工作工具集：**一个仓库，13 个独立工具，19 个当前 C# 文件（含 1 个 Windows 启动器源码）**。中文说明，每个工具可单独安装、更新和查看历史。采用 [MIT 许可](LICENSE)。
+按用途整理的 Unity 特效工作工具集：**一个仓库，14 个独立工具，20 个当前 C# 文件（含 1 个 Windows 启动器源码）**。中文说明，每个工具可单独安装、更新和查看历史。采用 [MIT 许可](LICENSE)。
 
 ## 工具目录
 
@@ -13,6 +13,7 @@
 | textures | [特效贴图调整](tools/textures/texture-adjust/README.md) | 在 Unity 内旋转、去色和调整普通颜色贴图的明暗，生成新的 PNG 变体。 | 主版本 |
 | previews | [特效预制体选帧缩略图](tools/previews/prefab-thumbnail/README.md) | 为粒子特效 Prefab 选择有辨识度的缩略图，方便素材库浏览。 | 主版本 |
 | previews | [Timeline 多轨道 Int 动画事件预览](tools/previews/timeline-int-event-preview/README.md) | 在编辑模式拖动时间轴，同步预览多个角色的 int 状态事件与表情。 | 主版本（公开适配待实测） |
+| previews | [Timeline 子弹时间轨道](tools/previews/timeline-time-scale/README.md) | Timeline 片段控制速度 | 0.1.0；原样收录，待验收 |
 | runtime | [子弹时间](tools/runtime/bullet-time/README.md) | 在 Play 模式减慢全局时间，用于观察特效细节或制作慢动作表现。 | 主版本 |
 | runtime | [特效延迟播放](tools/runtime/effect-delay/README.md) | 让特效启用后延迟出现，便于组合爆点、拖尾与分阶段表现。 | 主版本 |
 | runtime | [相机黑白背景切换](tools/runtime/screen-color/README.md) | 检查特效在深色和浅色背景下的边缘、透明度和可读性。 | 主版本 |

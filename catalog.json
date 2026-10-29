@@ -217,5 +217,18 @@
         "sha256": "0c0fa3331c979c555a18363d2439792ce82c20fece1f69e7212e82e6a88cbe5f"
       }
     ]
-  }
+  },
+{
+  "id": "previews/timeline-time-scale",
+  "name": "Timeline 子弹时间轨道",
+  "version": "0.1.0",
+  "status": "experimental",
+  "files": [
+    {
+      "source": "project-script-2026-10-29",
+      "path": "tools/previews/timeline-time-scale/Editor/TimeScaleTrack.cs",
+      "sha256": "12de6d31325fc47798528baa3f6a5530ad241bd21f707db70f676871a85ad63b"
+    }
+  ]
+}
 ]
